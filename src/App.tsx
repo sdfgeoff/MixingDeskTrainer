@@ -97,25 +97,23 @@ function App() {
   return (
     <div>
       <div>
-        <h3>Select an existing track:</h3>
+        <h1>Select a track</h1>
         <select onChange={handleTrackSelect}>
-          <option value="">Choose a track</option>
+          <option value="">Choose existing track</option>
           {audioTracks.map((track, index) => (
             <option key={index} value={track.src}>
               {track.name}
             </option>
           ))}
-        </select>
-      </div>
-      <div>
-        <h3>Or upload your own track:</h3>
+        </select> or {' '}
         <input type="file" accept="audio/*" onChange={handleFileChange} />
       </div>
 
+        <br/>
       <audio ref={audioElementRef} controls onPlay={initAudioContext} />
 
 
-      <h1>Parametric EQ</h1>
+      <h1>Parametric EQ Controls</h1>
 
 
       <table className="eq-controls-table">
