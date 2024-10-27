@@ -2,6 +2,7 @@ export interface EQBand {
     gain: number;
     frequency: number;
     q: number;
+    name: string;
 }
 
 
