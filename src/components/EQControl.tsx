@@ -5,13 +5,15 @@ interface EQControlProps {
   min: number;
   max: number;
   onChange: (newVal: number) => void;
+  logScale?: boolean;
 }
 
-const EQControl: React.FC<EQControlProps> = ({ value, min, max,  onChange }) => {
+const EQControl: React.FC<EQControlProps> = ({ value, min, max, logScale,  onChange }) => {
 
   // const [clickLocation, setClickLocation] = React.useState<[number, number] | null>(null);
 
-  const setValue = (val: number) => {
+  const setValue = (rawVal: number) => {
+    const val = logScale ? Math.pow(10, rawVal) : rawVal;
     if (val < min) {
       onChange(min);
     } else if (val > max) {
@@ -20,6 +22,11 @@ const EQControl: React.FC<EQControlProps> = ({ value, min, max,  onChange }) => 
       onChange(val);
     }
   }
+
+  const derivedVal = logScale ? Math.log10(value) : value;
+  const logMinFreq = logScale ? Math.log10(min) : min;
+  const logMaxFreq = logScale ? Math.log10(max) : max;
+  const stepSize = (logMaxFreq - logMinFreq) / 1000.0;
 
   // const onScroll = useCallback((e: WheelEvent) => {
   //   e.preventDefault();
@@ -41,7 +48,11 @@ const EQControl: React.FC<EQControlProps> = ({ value, min, max,  onChange }) => 
 
   
   return (<>
+    <input type="range" min={logMinFreq} max={logMaxFreq} step={stepSize} value={derivedVal} onChange={(e) => setValue(parseFloat(e.target.value))} />
+
+    {/*
     <input type="range" min={min} max={max} step={(max-min) / 1000.0} value={value} onChange={(e) => setValue(parseFloat(e.target.value))} />
+    */}
     {/* <div
       ref={setScrollDiv}
       onMouseDown={(e) => {

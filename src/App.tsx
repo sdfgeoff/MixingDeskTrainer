@@ -128,6 +128,7 @@ function App() {
                   value={band.frequency}
                   min={60}
                   max={20000}
+                  logScale={true}
                   onChange={(newVal) => modEqSetting(index, (prev) => ({
                     ...prev,
                     frequency: newVal
