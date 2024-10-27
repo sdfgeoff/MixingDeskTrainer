@@ -163,8 +163,8 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
                 <EQControl
                   value={band.gain}
-                  min={-12}
-                  max={12}
+                  min={-18}
+                  max={18}
                   onChange={(newVal) => modEqSetting(index, (prev) => ({
                     ...prev,
                     gain: newVal

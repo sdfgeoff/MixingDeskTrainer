@@ -9,11 +9,13 @@ export const COLORS = [
     "#FF0000"
 ]
 
+export const GRIDLINE_COLOR = "#444444"
+
 
 const MIN_FREQ = 30
 const MAX_FREQ = 20000
-const MIN_GAIN = -12
-const MAX_GAIN = 12
+const MIN_GAIN = -18
+const MAX_GAIN = 18
 
 const FREQ_RANGE = MAX_FREQ - MIN_FREQ
 const GAIN_RANGE = MAX_GAIN - MIN_GAIN
@@ -21,7 +23,14 @@ const GAIN_RANGE = MAX_GAIN - MIN_GAIN
 const PIXELS_X = 640
 const PIXELS_Y = 320
 
-const FAKE_SAMPLE_RATE = 44100
+const FAKE_SAMPLE_RATE = 411000 // IDK why this is needed. Could probably factor it out somehow
+
+const DB_GRID_LINES = [
+    -12, -6, 0, 6, 12
+]
+const FREQ_GRID_LINES = [
+    50, 100, 200, 500, 1000, 2000, 5000, 10000
+]
 
 interface FilterConstants {
     a0: number,
@@ -71,10 +80,6 @@ const evaluateBiquad = (filterConstants: FilterConstants, freq: number) => {
 
     // convert to db
     return 20 * Math.log10(result);
-
-    // return result;
-
-
 }
 
 
@@ -143,25 +148,55 @@ const EQView: React.FC<EQViewProps> = ({ bands }) => {
             <h1>EQ Visualizer</h1>
             <svg viewBox={`0 0 ${PIXELS_X} ${PIXELS_Y}`} width={PIXELS_X} height={PIXELS_Y} style={{ border: "1px solid black", background: "black" }}>
 
-                {parametersWithSamples.map((p, i) => {
-                    // Box at freq/gain
-                    return <rect x={freqToX(p.frequency) - 1} y={gainToY(p.gain) - 1} width={4} height={4} stroke={p.color} strokeWidth={2} />
+                {/* DB Grid lines at 12db placed at DB_GRID_LINES  */}
+                {DB_GRID_LINES.map((db) => {
+                    const y = gainToY(db)
+                    return <line x1={0} y1={y} x2={PIXELS_X} y2={y} stroke={GRIDLINE_COLOR} strokeWidth={1} />
+                }
+                )}
+
+                {/* Labels for DB Grid lines */}
+                {DB_GRID_LINES.map((db) => {
+                    const y = gainToY(db)
+                    return <text x={0} y={y} fill="white" fontSize={20} alignmentBaseline="middle" dominantBaseline="middle">{db}</text>
                 })}
+
+
+                {/* Frequency Grid lines, spaced at log intervals (ie 1,2,3,4,5,6,7,8,9,10, 20, 30, 40, 50....)  */}
+                {Array.from({ length: 40 }).map((_, i) => {
+                    const octave = Math.pow(10, Math.floor(i / 10))
+                    const freq = octave * (i % 10 + 1)
+                    const x = freqToX(freq)
+                    return <line x1={x} y1={0} x2={x} y2={PIXELS_Y} stroke={GRIDLINE_COLOR} strokeWidth={1} />
+                })}
+                {/* Labels for Frequency Grid lines, placed at FREQ_GRID_LINES */}
+                {FREQ_GRID_LINES.map((freq) => {
+                    const x = freqToX(freq)
+                    return <text x={x} y={PIXELS_Y} fill="white" fontSize={20} dominantBaseline="top" textAnchor='middle'>{freq.toString().replace(new RegExp("000$"), "k")}</text>
+                })}
+
+
                 {parametersWithSamples.map((p, i) => {
                     // Bar chart at each sample
                     return p.samples.map((s, j) => {
                         const gainY = gainToY(s)
                         if (s > 0) {
-                            return <rect x={freqToX(frequencyPoints[j]) - i * 1} y={gainY} width={2} height={PIXELS_Y / 2 - gainY} fill={p.color} />
+                            return <rect x={freqToX(frequencyPoints[j]) - i * 1} y={gainY} width={1} height={PIXELS_Y / 2 - gainY} fill={p.color} />
                         } else {
-                            return <rect x={freqToX(frequencyPoints[j]) - i * 1} y={PIXELS_Y / 2} width={2} height={Math.abs(gainY - PIXELS_Y / 2)} fill={p.color} />
+                            return <rect x={freqToX(frequencyPoints[j]) - i * 1} y={PIXELS_Y / 2} width={1} height={Math.abs(gainY - PIXELS_Y / 2)} fill={p.color} />
                         }
                     })
                 })
                 }
 
                 {/* Total response */}
-                <polyline points={totalResponse.map((v, i) => `${i * PIXELS_X / totalResponse.length},${gainToY(v)}`).join(" ")} stroke="yellow" strokeWidth={2} fill="none" />
+                <polyline points={totalResponse.map((v, i) => `${i * PIXELS_X / totalResponse.length},${gainToY(v)}`).join(" ")} stroke="yellow" strokeWidth={1} fill="none" />
+
+
+                {parametersWithSamples.map((p, i) => {
+                    // Box at freq/gain
+                    return <rect x={freqToX(p.frequency) - 2} y={gainToY(p.gain) - 2} width={5} height={5} stroke={p.color} strokeWidth={2} fillOpacity={0.0} />
+                })}
 
             </svg>
         </div>
