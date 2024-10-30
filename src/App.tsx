@@ -7,8 +7,8 @@ import EQView from './components/EQView';
 
 // Define a list of pre-existing audio tracks
 const audioTracks = [
-  { name: 'Lxybam', src: 'lxybam.mp3' },
-  { name: 'Sermon on Lazarus', src: '2021-05-19 - Raising Lazarus, Scene 1_ Lazarus is Dead - Paul Gordon (519211629596269).mp3' },
+  { name: 'CS Lewis on Prayer', src: 'c.s.lewis-original-recording.mp3', description: "A recording of CS Lewis himself talking about prayer. This was recorded in 1944 and became the book 'Mere Christianity'. This track has some strange recording artifacts due to it's age." },
+  { name: 'Piano Improvisation', src: 'all-creatures-of-our-god-and-king-piano-improvisation-247210.mp3', description: "An improvisation on All Creatures of our God and King done by smccleery (sourced from pixabay.com)" },
 ];
 
 function App() {
@@ -21,33 +21,41 @@ function App() {
     ]
   });
   const audioContextRef = useRef<AudioContext | null>(null);
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const eqFiltersRef = useRef<BiquadFilterNode[]>([]);
+  const [eqFilters, setEqFilters] = useState<BiquadFilterNode[] | undefined>();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && audioElementRef.current) {
-      audioElementRef.current.src = URL.createObjectURL(file);
+    if (file && audioElement) {
+      audioElement.src = URL.createObjectURL(file);
     }
   };
 
   const handleTrackSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    if (audioElementRef.current) {
-      audioElementRef.current.src = event.target.value;
+    if (audioElement) {
+      audioElement.src = event.target.value;
     }
   };
 
   const initAudioContext = () => {
-    if (!audioContextRef.current) {
+    if (!audioContextRef.current && audioElement) {
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      const audioElement = audioElementRef.current!;
+      
       const source = audioContextRef.current.createMediaElementSource(audioElement);
       sourceRef.current = source;
 
       // Set up 4 EQ filters
-      const filters = mixerSettings.parametricEq.map(band => createEQFilter(band.frequency));
-      eqFiltersRef.current = filters;
+      const filters = mixerSettings.parametricEq.map(_ => {
+        const filter = audioContextRef.current!.createBiquadFilter();
+        filter.type = 'peaking';
+        filter.frequency.value = 100;
+        filter.Q.value = 1;
+        filter.gain.value = 0;
+        return filter;
+      });
+      setEqFilters(filters);
 
       // Connect filters in series and to destination
       filters.forEach((filter, idx) => {
@@ -60,15 +68,6 @@ function App() {
 
       filters[filters.length - 1].connect(audioContextRef.current.destination);
     }
-  };
-
-  const createEQFilter = (frequency: number): BiquadFilterNode => {
-    const filter = audioContextRef.current!.createBiquadFilter();
-    filter.type = 'peaking';
-    filter.frequency.value = frequency;
-    filter.Q.value = 1;
-    filter.gain.value = 0;
-    return filter;
   };
 
   const modEqSetting = (index: number, mod: (f: EQBand) => EQBand) => {
@@ -84,15 +83,15 @@ function App() {
 
   // Sync change from eqSettings to the biquad filters
   useEffect(() => {
-    if (audioContextRef.current) {
+    if (eqFilters) {
       mixerSettings.parametricEq.forEach((band, index) => {
-        const filter = eqFiltersRef.current[index];
+        const filter = eqFilters[index];
         filter.frequency.value = band.frequency;
         filter.Q.value = band.q;
         filter.gain.value = band.gain;
       });
     }
-  }, [mixerSettings]);
+  }, [eqFilters, mixerSettings]);
 
   return (
     <div>
@@ -108,9 +107,12 @@ function App() {
         </select> or {' '}
         <input type="file" accept="audio/*" onChange={handleFileChange} />
       </div>
-
-        <br/>
-      <audio ref={audioElementRef} controls onPlay={initAudioContext} />
+        <div>
+          {/* If the current audio source matches one of the known sources, display it's description */}
+          {audioTracks.find(track => track.src === audioElement?.src)?.description}
+          Test
+        </div>
+      <audio ref={setAudioElement} controls onPlay={initAudioContext} />
 
 
       <h1>Parametric EQ Controls</h1>
