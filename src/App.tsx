@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import EQControl from './components/EQControl';
 import { EQBand, MixerSettings } from './components/MixerModel';
 import EQView from './components/EQView';
+import { PEQ } from './components/PEQ';
 
 
 
@@ -121,15 +122,7 @@ function App() {
     }
   }, [source, userEqFilters, hiddenEqFilters, audioContext]);
 
-  const modEqSetting = (index: number, mod: (f: EQBand) => EQBand) => {
-    setMixerSettings(prev => ({
-      ...prev,
-      parametricEq: prev.parametricEq.map((band, idx) =>
-        idx === index ? mod(band) : band
-      )
-    })
-    );
-  };
+
 
 
   // Sync change from eqSettings to the biquad filters
@@ -197,76 +190,15 @@ function App() {
 
 
       <h1>Parametric EQ Controls</h1>
+      <PEQ
+        bands={mixerSettings.parametricEq}
+        onChange={(updater) => setMixerSettings((prev) => ({
+          ...prev,
+          parametricEq:  updater(prev.parametricEq)
+        }))}
+        />
 
 
-      <table className="eq-controls-table">
-        <tbody>
-          <tr>
-            {mixerSettings.parametricEq.map((band, index) => (
-              <td key={`freq-${index}`} style={{ padding: '0.5em' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <EQControl
-                    value={band.frequency}
-                    min={60}
-                    max={20000}
-                    logScale={true}
-                    onChange={(newVal) => modEqSetting(index, (prev) => ({
-                      ...prev,
-                      frequency: newVal
-                    }))}
-                  />
-                  Freq
-                </div>
-              </td>
-            ))}
-          </tr>
-          <tr>
-            {mixerSettings.parametricEq.map((band, index) => (
-              <td key={`q-${index}`} style={{ padding: '0.5em' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <EQControl
-                    value={band.q}
-                    min={0.1}
-                    max={10}
-                    onChange={(newVal) => modEqSetting(index, (prev) => ({
-                      ...prev,
-                      q: newVal
-                    }))}
-                  />
-                  Width
-                </div>
-              </td>
-            ))}
-          </tr>
-          <tr>
-            {mixerSettings.parametricEq.map((band, index) => (
-              <td key={`gain-${index}`} style={{ padding: '0.5em' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <EQControl
-                    value={band.gain}
-                    min={-18}
-                    max={18}
-                    onChange={(newVal) => modEqSetting(index, (prev) => ({
-                      ...prev,
-                      gain: newVal
-                    }))}
-                  />
-                  Gain
-                </div>
-              </td>
-            ))}
-          </tr>
-          <tr>
-            {mixerSettings.parametricEq.map((band, index) => (
-              <td key={`name-${index}`} style={{ padding: '0.5em' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontWeight: 'bold' }}>
-                  {band.name}
-                </div>
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
       <EQView
         bands={mixerSettings.parametricEq}
       />
