@@ -64,12 +64,12 @@ export const PEQ: React.FC<PEQProps> = ({ bands, onChange }) => {
               <td key={`gain-${index}`} style={{ padding: '0.5em' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <EQControl
-                    value={band.gain}
+                    value={band.gainDb}
                     min={-18}
                     max={18}
                     onChange={(newVal) => modEqSetting(index, (prev) => ({
                       ...prev,
-                      gain: newVal
+                      gainDb: newVal
                     }))}
                   />
                   Gain

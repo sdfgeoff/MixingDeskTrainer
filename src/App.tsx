@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import EQControl from './components/EQControl';
-import { EQBand, MixerSettings } from './components/MixerModel';
+import { EQBand, ChannelSettings, Mod } from './components/MixerModel';
 import EQView from './components/EQView';
 import { PEQ } from './components/PEQ';
 
@@ -51,21 +51,32 @@ const useSourceNode = (audioElement: HTMLAudioElement | undefined, audioContext:
 const audioTracks = [
   { name: 'CS Lewis on Prayer', src: 'c.s.lewis-original-recording.mp3', description: "A recording of CS Lewis himself talking about prayer. This was recorded in 1944 and became the book 'Mere Christianity'. This track has some strange recording artifacts due to it's age." },
   { name: 'Piano Improvisation', src: 'all-creatures-of-our-god-and-king-piano-improvisation-247210.mp3', description: "An improvisation on All Creatures of our God and King done by smccleery (sourced from pixabay.com)" },
+  { name: 'Keith Bible Reading', src: 'KeithBibleReading.mp3', description: "Bible Reading at a Lecturn Microphone" },
 ];
 
+
+const INITIAL_EQ = [
+  { gainDb: 0, frequency: 60, q: 1, name: 'LF' },
+  { gainDb: 0, frequency: 250, q: 1, name: 'LM' },
+  { gainDb: 0, frequency: 1000, q: 1, name: 'HM' },
+  { gainDb: 0, frequency: 8000, q: 1, name: 'HF' },
+]
+
+
 function App() {
-  const [mixerSettings, setMixerSettings] = useState<MixerSettings>({
-    parametricEq: [
-      { gain: 0, frequency: 60, q: 1, name: 'LF' },
-      { gain: 0, frequency: 250, q: 1, name: 'LM' },
-      { gain: 0, frequency: 1000, q: 1, name: 'HM' },
-      { gain: 0, frequency: 8000, q: 1, name: 'HF' },
-    ]
+  const [mixerSettings, setMixerSettings] = useState<ChannelSettings>({
+    parametricEq: INITIAL_EQ,
+    preamp: {
+      gainDb: 0.5
+    }
   });
 
   const [audioContext, setAudioContext] = useState<AudioContext>();
   const [audioElement, setAudioElement] = useState<HTMLAudioElement>();
   const source = useSourceNode(audioElement, audioContext);
+
+  const [outputLevel, setOutputLevel] = useState<number>(0);
+
 
   const userEqFilters = useMemo(() => {
     if (!audioContext) {
@@ -80,6 +91,14 @@ function App() {
     }
     return createEqFilterChain(audioContext, mixerSettings.parametricEq.length);
   }, [audioContext, mixerSettings.parametricEq.length]);
+
+  const gainNode = useMemo(() => {
+    if (!audioContext) {
+      return undefined
+    }
+    const gainNode = audioContext.createGain();
+    return gainNode
+  }, [audioContext]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -100,22 +119,61 @@ function App() {
   }
 
 
-  // Connect source -> hidden filters -> main filters -> destination
+  const analyzerNode = useMemo(() => {
+    if (!audioContext) {
+      return undefined
+    }
+    const analyzerNode = audioContext.createAnalyser();
+    analyzerNode.fftSize = 256;
+    return analyzerNode
+  }, [audioContext])
+
+  const updatePeaking = () => {
+    requestAnimationFrame(updatePeaking)
+
+    const dataArray = new Float32Array(analyzerNode?.frequencyBinCount ?? 0);
+
+    analyzerNode?.getFloatTimeDomainData(dataArray)
+    // Get RMS
+    const rms = Math.sqrt(dataArray.reduce((acc, val) => acc + val * val, 0) / dataArray.length);
+    // Convert to dB
+    const db = 20 * Math.log10(rms);
+    setOutputLevel(db)
+  }
+
+
   useEffect(() => {
-    if (source && userEqFilters && hiddenEqFilters && audioContext) {
+    if (analyzerNode) {
+      updatePeaking()
+    }
+  }, [analyzerNode])
+
+
+
+
+
+
+  // Connect source -> hidden filters -> gain Node -> main filters -----> destination
+  //                                                                 '--> analyzer 
+  useEffect(() => {
+    if (source && userEqFilters && hiddenEqFilters && audioContext && gainNode && analyzerNode) {
       const firstHiddenFilter = hiddenEqFilters[0];
       source.connect(firstHiddenFilter);
 
       const lastHiddenFilter = hiddenEqFilters[hiddenEqFilters.length - 1];
       const firstUserFilter = userEqFilters[0];
-      lastHiddenFilter.connect(firstUserFilter);
+      lastHiddenFilter.connect(gainNode);
+      gainNode?.connect(firstUserFilter)
 
       const lastUserFilter = userEqFilters[userEqFilters.length - 1];
       const destination = audioContext.destination;
       lastUserFilter.connect(destination);
 
+      lastUserFilter.connect(analyzerNode);
+
       return () => {
         source.disconnect();
+        gainNode.disconnect();
         lastHiddenFilter.disconnect();
         lastUserFilter.disconnect();
       }
@@ -132,16 +190,23 @@ function App() {
         const filter = userEqFilters[index];
         filter.frequency.value = band.frequency;
         filter.Q.value = band.q;
-        filter.gain.value = band.gain;
+        filter.gain.value = band.gainDb;
       });
     }
-  }, [userEqFilters, mixerSettings]);
+  }, [userEqFilters, mixerSettings.parametricEq]);
+
+  // Sync changes from preamp to the gainNode
+  useEffect(() => {
+    if (gainNode) {
+      gainNode.gain.value = Math.pow(10, mixerSettings.preamp.gainDb / 20);
+    }
+  })
 
   const scrambleHiddenEq = () => {
     if (hiddenEqFilters) {
       hiddenEqFilters.forEach((filter) => {
         // Log compensate frequency
-        filter.frequency.value = Math.pow(10, Math.random() * 3) * 20; 
+        filter.frequency.value = Math.pow(10, Math.random() * 3) * 20;
         filter.Q.value = Math.random() * 10;
 
         filter.gain.value = (-Math.random()) * 20;
@@ -149,7 +214,6 @@ function App() {
         // Math.pow(10, gain / 40);
         //filter.gain.value = Math.pow(10, (-Math.random()) * 80 / 40) * 24;
 
-        console.log(filter.frequency.value, filter.Q.value, filter.gain.value);
       });
     }
   }
@@ -163,6 +227,16 @@ function App() {
       });
     }
   }
+
+  const setEqValues = (updater: Mod<EQBand[]>) => setMixerSettings((prev) => ({
+    ...prev,
+    parametricEq: updater(prev.parametricEq)
+  }))
+
+  const resetMainEq = () => {
+    setEqValues(() => INITIAL_EQ)
+  }
+
 
   return (
     <div>
@@ -178,7 +252,7 @@ function App() {
         </select> or {' '}
         <input type="file" accept="audio/*" onChange={handleFileChange} />
       </div>
-      <div style={{opacity: 0.5, fontSize:"0.8rem"}}>
+      <div style={{ opacity: 0.5, fontSize: "0.8rem" }}>
         {/* If the current audio source matches one of the known sources, display it's description */}
         {audioTracks.find(track => audioElement?.src.endsWith(track.src))?.description}
       </div>
@@ -190,18 +264,48 @@ function App() {
 
 
       <h1>Parametric EQ Controls</h1>
-      <PEQ
-        bands={mixerSettings.parametricEq}
-        onChange={(updater) => setMixerSettings((prev) => ({
-          ...prev,
-          parametricEq:  updater(prev.parametricEq)
-        }))}
+      <button onClick={resetMainEq}>Reset EQ</button>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <EQControl value={mixerSettings.preamp.gainDb} min={-18} max={18} onChange={(val) => setMixerSettings((prev) => {
+            return {
+              ...prev,
+              preamp: {
+                ...prev.preamp,
+                gainDb: val
+              }
+            }
+          })} /><br />Preamp
+        </div>
+        <PEQ
+          bands={mixerSettings.parametricEq}
+          onChange={setEqValues}
         />
+      </div>
 
 
       <EQView
         bands={mixerSettings.parametricEq}
       />
+
+      <div>
+        Pk: <div style={{
+          width: '1em',
+          height: '1em',
+          backgroundColor: outputLevel > 10 ? "red" : "grey"
+        }}/>
+        0DB: <div style={{
+          width: '1em',
+          height: '1em',
+          backgroundColor: outputLevel > -0 ? "green" : "grey"
+        }}/>
+        Sig: <div style={{
+          width: '1em',
+          height: '1em',
+          backgroundColor: outputLevel > -30 ? "green" : "grey"
+        }}/>
+
+      </div>
     </div>
   );
 }

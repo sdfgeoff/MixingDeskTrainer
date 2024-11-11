@@ -44,17 +44,14 @@ interface FilterConstants {
 const deriveBandpassFilterConstants = (band: EQBand): FilterConstants => {
     const Q = band.q;
     const centerFreq = band.frequency;
-    const gain = band.gain;
+    const gain = band.gainDb;
 
     var gain_abs = Math.pow(10, gain / 40);
 
-    const sampleRate = 44100;
     const omega = 2 * Math.PI * centerFreq / FAKE_SAMPLE_RATE;
     const sn = Math.sin(omega);
     const cs = Math.cos(omega);
     const alpha = sn / (2 * Q);
-    const beta = Math.sqrt(gain_abs + gain_abs);
-
 
     const a0 = 1 + (alpha / gain_abs);
     const a1 = (-2 * cs) / a0;
@@ -147,43 +144,16 @@ const EQView: React.FC<EQViewProps> = ({ bands }) => {
         <div>
             <h1>EQ Visualizer</h1>
             <svg viewBox={`0 0 ${PIXELS_X} ${PIXELS_Y}`} width={PIXELS_X} height={PIXELS_Y} style={{ border: "1px solid black", background: "black" }}>
-
-                {/* DB Grid lines at 12db placed at DB_GRID_LINES  */}
-                {DB_GRID_LINES.map((db, i) => {
-                    const y = gainToY(db)
-                    return <line key={`gain-grid-${i}`} x1={0} y1={y} x2={PIXELS_X} y2={y} stroke={GRIDLINE_COLOR} strokeWidth={1} />
-                }
-                )}
-
-                {/* Labels for DB Grid lines */}
-                {DB_GRID_LINES.map((db, i) => {
-                    const y = gainToY(db)
-                    return <text key={`gain-text-${i}`} x={0} y={y} fill="white" fontSize={20} alignmentBaseline="middle" dominantBaseline="middle">{db}</text>
-                })}
-
-
-                {/* Frequency Grid lines, spaced at log intervals (ie 1,2,3,4,5,6,7,8,9,10, 20, 30, 40, 50....)  */}
-                {Array.from({ length: 40 }).map((_, i) => {
-                    const octave = Math.pow(10, Math.floor(i / 10))
-                    const freq = octave * (i % 10 + 1)
-                    const x = freqToX(freq)
-                    return <line key={`frequency-grid-${i}`} x1={x} y1={0} x2={x} y2={PIXELS_Y} stroke={GRIDLINE_COLOR} strokeWidth={1} />
-                })}
-                {/* Labels for Frequency Grid lines, placed at FREQ_GRID_LINES */}
-                {FREQ_GRID_LINES.map((freq, i) => {
-                    const x = freqToX(freq)
-                    return <text key={`frequency-text-${i}`} x={x} y={PIXELS_Y} fill="white" fontSize={20} dominantBaseline="top" textAnchor='middle'>{freq.toString().replace(new RegExp("000$"), "k")}</text>
-                })}
-
+                <Scale/>
 
                 {parametersWithSamples.map((p, i) => {
                     // Bar chart at each sample
                     return p.samples.map((s, j) => {
                         const gainY = gainToY(s)
                         if (s > 0) {
-                            return <rect key={`bar-positive-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 1} y={gainY} width={1} height={PIXELS_Y / 2 - gainY} fill={p.color} />
+                            return <rect key={`bar-positive-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={gainY} width={2} height={PIXELS_Y / 2 - gainY} fill={p.color} />
                         } else {
-                            return <rect key={`bar-negative-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 1} y={PIXELS_Y / 2} width={1} height={Math.abs(gainY - PIXELS_Y / 2)} fill={p.color} />
+                            return <rect key={`bar-negative-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={PIXELS_Y / 2} width={2} height={Math.abs(gainY - PIXELS_Y / 2)} fill={p.color} />
                         }
                     })
                 })
@@ -195,12 +165,44 @@ const EQView: React.FC<EQViewProps> = ({ bands }) => {
 
                 {parametersWithSamples.map((p, i) => {
                     // Box at freq/gain
-                    return <rect key={`sample-rect-${i}`} x={freqToX(p.frequency) - 2} y={gainToY(p.gain) - 2} width={5} height={5} stroke={p.color} strokeWidth={2} fillOpacity={0.0} />
+                    return <rect key={`sample-rect-${i}`} x={freqToX(p.frequency) - 2} y={gainToY(p.gainDb) - 2} width={5} height={5} stroke={p.color} strokeWidth={2} fillOpacity={0.0} />
                 })}
 
             </svg>
         </div>
     );
 };
+
+
+const Scale: React.FC = () => {
+    return React.useMemo(() => <>
+        {/* DB Grid lines at 12db placed at DB_GRID_LINES  */}
+        {DB_GRID_LINES.map((db, i) => {
+            const y = gainToY(db)
+            return <line key={`gain-grid-${i}`} x1={0} y1={y} x2={PIXELS_X} y2={y} stroke={GRIDLINE_COLOR} strokeWidth={1} />
+        }
+        )}
+
+        {/* Labels for DB Grid lines */}
+        {DB_GRID_LINES.map((db, i) => {
+            const y = gainToY(db)
+            return <text key={`gain-text-${i}`} x={0} y={y} fill="white" fontSize={20} alignmentBaseline="middle" dominantBaseline="middle">{db}</text>
+        })}
+
+
+        {/* Frequency Grid lines, spaced at log intervals (ie 1,2,3,4,5,6,7,8,9,10, 20, 30, 40, 50....)  */}
+        {Array.from({ length: 40 }).map((_, i) => {
+            const octave = Math.pow(10, Math.floor(i / 10))
+            const freq = octave * (i % 10 + 1)
+            const x = freqToX(freq)
+            return <line key={`frequency-grid-${i}`} x1={x} y1={0} x2={x} y2={PIXELS_Y} stroke={GRIDLINE_COLOR} strokeWidth={1} />
+        })}
+        {/* Labels for Frequency Grid lines, placed at FREQ_GRID_LINES */}
+        {FREQ_GRID_LINES.map((freq, i) => {
+            const x = freqToX(freq)
+            return <text key={`frequency-text-${i}`} x={x} y={PIXELS_Y} fill="white" fontSize={20} dominantBaseline="top" textAnchor='middle'>{freq.toString().replace(new RegExp("000$"), "k")}</text>
+        })}
+    </>, [])
+}
 
 export default EQView;
