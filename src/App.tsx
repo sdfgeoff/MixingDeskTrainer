@@ -5,6 +5,7 @@ import EQView from './components/EQView';
 import { PEQ } from './components/PEQ';
 import { COLORS, PADDING } from './StyleConstants';
 import { Panel } from './components/Panel';
+import { LabelledControl } from './components/LabelledControl';
 
 
 
@@ -30,7 +31,7 @@ const createEqFilterChain = (audioContext: AudioContext, length: number) => {
 }
 
 
-const useSourceNode = (audioElement: HTMLAudioElement | undefined, audioContext: AudioContext | undefined) => {
+const useSourceNode = (audioElement: HTMLAudioElement | null, audioContext: AudioContext | undefined) => {
   // You can only get one source node from an element, and sometimes useEffects fire multiple times. This
   // creates a single source node for the provided element/context using a ref to ensure it happens only once,
   // but externally acts like a useState so you can respond to changes
@@ -59,10 +60,10 @@ const audioTracks = [
 
 const INITIAL_EQ: ParametricEq = {
   bands: [
-  { gainDb: 0, frequency: 60, q: 1, name: 'LF' },
-  { gainDb: 0, frequency: 250, q: 1, name: 'LM' },
-  { gainDb: 0, frequency: 1000, q: 1, name: 'HM' },
-  { gainDb: 0, frequency: 8000, q: 1, name: 'HF' },
+    { gainDb: 0, frequency: 60, q: 1, name: 'LF' },
+    { gainDb: 0, frequency: 250, q: 1, name: 'LM' },
+    { gainDb: 0, frequency: 1000, q: 1, name: 'HM' },
+    { gainDb: 0, frequency: 8000, q: 1, name: 'HF' },
   ],
   enabled: true
 }
@@ -77,7 +78,7 @@ function App() {
   });
 
   const [audioContext, setAudioContext] = useState<AudioContext>();
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement>();
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const source = useSourceNode(audioElement, audioContext);
 
   const [outputLevel, setOutputLevel] = useState<number>(0);
@@ -197,7 +198,7 @@ function App() {
         const filter = userEqFilters[index];
         filter.frequency.value = band.frequency;
         filter.Q.value = band.q;
-        filter.gain.value = band.gainDb;
+        filter.gain.value = mixerSettings.parametricEq.enabled ? band.gainDb : 0;
       });
     }
   }, [userEqFilters, mixerSettings.parametricEq]);
@@ -272,54 +273,85 @@ function App() {
 
       <h1>Parametric EQ Controls</h1>
       <button onClick={resetMainEq}>Reset EQ</button>
-      <div style={{display: 'flex', flexDirection: 'column', gap: PADDING.medium, alignItems: 'start'}}>
-      <div style={{ display: 'flex', alignItems: 'start', gap: PADDING.medium }}>
-        <Panel heading="Preamp">
-          <KnobControl value={mixerSettings.preamp.gainDb} min={-18} max={18} onChange={(val) => setMixerSettings((prev) => {
-            return {
-              ...prev,
-              preamp: {
-                ...prev.preamp,
-                gainDb: val
-              }
-            }
-          })} /><br />Gain
-        </Panel>
-        <Panel heading="Parametric EQ">
-          <PEQ
-            eqSettings={mixerSettings.parametricEq}
-            onChangeEq={setEqValues}
-          />
-        </Panel>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: PADDING.medium, alignItems: 'start' }}>
+        <div style={{ display: 'flex', alignItems: 'start', gap: PADDING.medium }}>
+          <Panel heading="Preamp">
+            <LabelledControl label="Gain">
+              <KnobControl value={mixerSettings.preamp.gainDb} min={-18} max={18} onChange={(val) => setMixerSettings((prev) => {
+                return {
+                  ...prev,
+                  preamp: {
+                    ...prev.preamp,
+                    gainDb: val
+                  }
+                }
+              })} />
+            </LabelledControl>
+          </Panel>
+          <Panel heading="Parametric EQ">
+            <PEQ
+              eqSettings={mixerSettings.parametricEq}
+              onChangeEq={setEqValues}
+            />
+          </Panel>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'start', gap: PADDING.medium }}>
+          <Panel heading="Touch Screen">
+            <EQView
+              eqSettings={mixerSettings.parametricEq}
+            />
+          </Panel>
+          <Panel>
+            <div>
+              {LEVEL_INDICATOR_LEDS.map((led, index) => (
+                <div key={index} style={{ display: "flex", gap: PADDING.small }}>
+                  <div
+                    style={{
+                      width: '1em',
+                      height: '1em',
+                      borderRadius: '50%',
+                      backgroundColor: led.color,
+                      position: 'relative',
+                    }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      borderRadius: '50%',
+                      backgroundColor: 'black',
+                      opacity: outputLevel > led.threshold ? '0%' : '90%'
+                    }} />
+                  </div>
+                  {led.label}
+
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
       </div>
 
-      <Panel heading="Touch Screen">
-        <EQView
-          eqSettings={mixerSettings.parametricEq}
-        />
-      </Panel>
-      </div>
-
-      <div>
-        Pk: <div style={{
-          width: '1em',
-          height: '1em',
-          backgroundColor: outputLevel > 10 ? "red" : "grey"
-        }} />
-        0DB: <div style={{
-          width: '1em',
-          height: '1em',
-          backgroundColor: outputLevel > -0 ? "green" : "grey"
-        }} />
-        Sig: <div style={{
-          width: '1em',
-          height: '1em',
-          backgroundColor: outputLevel > -30 ? "green" : "grey"
-        }} />
-
-      </div>
     </div>
   );
 }
+
+const LEVEL_INDICATOR_LEDS = [
+  { label: 'Pk', color: 'red', threshold: 12 },
+  { label: '+9', color: 'yellow', threshold: 9 },
+  { label: '+6', color: 'yellow', threshold: 6 },
+  { label: '+3', color: 'yellow', threshold: 3 },
+  { label: '0', color: 'green', threshold: 0 },
+  { label: '-3', color: 'green', threshold: -3 },
+  { label: '-6', color: 'green', threshold: -6 },
+  { label: '-9', color: 'green', threshold: -9 },
+  { label: '-12', color: 'green', threshold: -12 },
+  { label: '-16', color: 'green', threshold: -16 },
+  { label: '-20', color: 'green', threshold: -20 },
+  { label: '-40', color: 'green', threshold: -40 },
+
+]
 
 export default App;

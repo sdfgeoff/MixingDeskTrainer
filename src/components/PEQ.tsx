@@ -41,6 +41,7 @@ export const PEQ: React.FC<PEQProps> = ({ eqSettings, onChangeEq: onChange }) =>
                                         ...prev,
                                         q: newVal
                                     }))}
+                                    logScale
                                 />
                             </LabelledControl>
                         </td>
