@@ -6,11 +6,18 @@ export interface EQBand {
 }
 
 
+export interface ParametricEq {
+    bands: EQBand[]
+    enabled: boolean
+}
+
+export interface Preamp {
+    gainDb: number;
+}
+
 export interface ChannelSettings {
-    parametricEq: EQBand[];
-    preamp: {
-        gainDb: number;
-    }
+    parametricEq: ParametricEq;
+    preamp: Preamp
 }
 
 

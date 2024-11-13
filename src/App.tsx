@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import EQControl from './components/EQControl';
-import { EQBand, ChannelSettings, Mod } from './components/MixerModel';
+import KnobControl from './components/KnobControl';
+import { EQBand, ChannelSettings, Mod, ParametricEq } from './components/MixerModel';
 import EQView from './components/EQView';
 import { PEQ } from './components/PEQ';
+import { COLORS, PADDING } from './StyleConstants';
+import { Panel } from './components/Panel';
 
 
 
@@ -55,12 +57,15 @@ const audioTracks = [
 ];
 
 
-const INITIAL_EQ = [
+const INITIAL_EQ: ParametricEq = {
+  bands: [
   { gainDb: 0, frequency: 60, q: 1, name: 'LF' },
   { gainDb: 0, frequency: 250, q: 1, name: 'LM' },
   { gainDb: 0, frequency: 1000, q: 1, name: 'HM' },
   { gainDb: 0, frequency: 8000, q: 1, name: 'HF' },
-]
+  ],
+  enabled: true
+}
 
 
 function App() {
@@ -77,20 +82,22 @@ function App() {
 
   const [outputLevel, setOutputLevel] = useState<number>(0);
 
+  const numBands = mixerSettings.parametricEq.bands.length;
+
 
   const userEqFilters = useMemo(() => {
     if (!audioContext) {
       return undefined
     }
-    return createEqFilterChain(audioContext, mixerSettings.parametricEq.length);
-  }, [audioContext, mixerSettings.parametricEq.length]);
+    return createEqFilterChain(audioContext, numBands);
+  }, [audioContext, numBands]);
 
   const hiddenEqFilters = useMemo(() => {
     if (!audioContext) {
       return undefined
     }
-    return createEqFilterChain(audioContext, mixerSettings.parametricEq.length);
-  }, [audioContext, mixerSettings.parametricEq.length]);
+    return createEqFilterChain(audioContext, numBands);
+  }, [audioContext, numBands]);
 
   const gainNode = useMemo(() => {
     if (!audioContext) {
@@ -129,7 +136,7 @@ function App() {
   }, [audioContext])
 
   const updatePeaking = () => {
-    requestAnimationFrame(updatePeaking)
+    requestAnimationFrame(updatePeaking) // TODO: figure out when to stop this!
 
     const dataArray = new Float32Array(analyzerNode?.frequencyBinCount ?? 0);
 
@@ -186,7 +193,7 @@ function App() {
   // Sync change from eqSettings to the biquad filters
   useEffect(() => {
     if (userEqFilters) {
-      mixerSettings.parametricEq.forEach((band, index) => {
+      mixerSettings.parametricEq.bands.forEach((band, index) => {
         const filter = userEqFilters[index];
         filter.frequency.value = band.frequency;
         filter.Q.value = band.q;
@@ -228,7 +235,7 @@ function App() {
     }
   }
 
-  const setEqValues = (updater: Mod<EQBand[]>) => setMixerSettings((prev) => ({
+  const setEqValues = (updater: Mod<ParametricEq>) => setMixerSettings((prev) => ({
     ...prev,
     parametricEq: updater(prev.parametricEq)
   }))
@@ -239,7 +246,7 @@ function App() {
 
 
   return (
-    <div>
+    <div style={{ background: COLORS.background, color: COLORS.text }}>
       <div>
         <h1>Select a track</h1>
         <select onChange={handleTrackSelect}>
@@ -265,9 +272,10 @@ function App() {
 
       <h1>Parametric EQ Controls</h1>
       <button onClick={resetMainEq}>Reset EQ</button>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <EQControl value={mixerSettings.preamp.gainDb} min={-18} max={18} onChange={(val) => setMixerSettings((prev) => {
+      <div style={{display: 'flex', flexDirection: 'column', gap: PADDING.medium, alignItems: 'start'}}>
+      <div style={{ display: 'flex', alignItems: 'start', gap: PADDING.medium }}>
+        <Panel heading="Preamp">
+          <KnobControl value={mixerSettings.preamp.gainDb} min={-18} max={18} onChange={(val) => setMixerSettings((prev) => {
             return {
               ...prev,
               preamp: {
@@ -275,35 +283,39 @@ function App() {
                 gainDb: val
               }
             }
-          })} /><br />Preamp
-        </div>
-        <PEQ
-          bands={mixerSettings.parametricEq}
-          onChange={setEqValues}
-        />
+          })} /><br />Gain
+        </Panel>
+        <Panel heading="Parametric EQ">
+          <PEQ
+            eqSettings={mixerSettings.parametricEq}
+            onChangeEq={setEqValues}
+          />
+        </Panel>
       </div>
 
-
-      <EQView
-        bands={mixerSettings.parametricEq}
-      />
+      <Panel heading="Touch Screen">
+        <EQView
+          eqSettings={mixerSettings.parametricEq}
+        />
+      </Panel>
+      </div>
 
       <div>
         Pk: <div style={{
           width: '1em',
           height: '1em',
           backgroundColor: outputLevel > 10 ? "red" : "grey"
-        }}/>
+        }} />
         0DB: <div style={{
           width: '1em',
           height: '1em',
           backgroundColor: outputLevel > -0 ? "green" : "grey"
-        }}/>
+        }} />
         Sig: <div style={{
           width: '1em',
           height: '1em',
           backgroundColor: outputLevel > -30 ? "green" : "grey"
-        }}/>
+        }} />
 
       </div>
     </div>

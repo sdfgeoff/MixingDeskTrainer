@@ -1,5 +1,5 @@
 import React from 'react';
-import { EQBand } from './MixerModel';
+import { EQBand, ParametricEq } from './MixerModel';
 
 
 export const COLORS = [
@@ -100,10 +100,11 @@ const gainToY = (gain: number) => {
 
 
 interface EQViewProps {
-    bands: EQBand[]
+    eqSettings: ParametricEq
 }
 
-const EQView: React.FC<EQViewProps> = ({ bands }) => {
+const EQView: React.FC<EQViewProps> = ({ eqSettings }) => {
+    const { bands } = eqSettings;
 
     const parametersWithColors = React.useMemo(() => {
         return bands.map((p, i) => ({
@@ -125,7 +126,7 @@ const EQView: React.FC<EQViewProps> = ({ bands }) => {
 
     const parametersWithSamples = React.useMemo(() => {
         return parametersWithColors.map(p => {
-            const  filterConstants = deriveBandpassFilterConstants(p)
+            const filterConstants = deriveBandpassFilterConstants(p)
 
             return {
                 ...p,
@@ -141,35 +142,32 @@ const EQView: React.FC<EQViewProps> = ({ bands }) => {
 
 
     return (
-        <div>
-            <h1>EQ Visualizer</h1>
-            <svg viewBox={`0 0 ${PIXELS_X} ${PIXELS_Y}`} width={PIXELS_X} height={PIXELS_Y} style={{ border: "1px solid black", background: "black" }}>
-                <Scale/>
+        <svg viewBox={`0 0 ${PIXELS_X} ${PIXELS_Y}`} width={PIXELS_X} height={PIXELS_Y} style={{ border: "1px solid black", background: "black" }}>
+            <Scale />
 
-                {parametersWithSamples.map((p, i) => {
-                    // Bar chart at each sample
-                    return p.samples.map((s, j) => {
-                        const gainY = gainToY(s)
-                        if (s > 0) {
-                            return <rect key={`bar-positive-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={gainY} width={2} height={PIXELS_Y / 2 - gainY} fill={p.color} />
-                        } else {
-                            return <rect key={`bar-negative-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={PIXELS_Y / 2} width={2} height={Math.abs(gainY - PIXELS_Y / 2)} fill={p.color} />
-                        }
-                    })
+            {parametersWithSamples.map((p, i) => {
+                // Bar chart at each sample
+                return p.samples.map((s, j) => {
+                    const gainY = gainToY(s)
+                    if (s > 0) {
+                        return <rect key={`bar-positive-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={gainY} width={2} height={PIXELS_Y / 2 - gainY} fill={p.color} />
+                    } else {
+                        return <rect key={`bar-negative-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={PIXELS_Y / 2} width={2} height={Math.abs(gainY - PIXELS_Y / 2)} fill={p.color} />
+                    }
                 })
-                }
+            })
+            }
 
-                {/* Total response */}
-                <polyline points={totalResponse.map((v, i) => `${i * PIXELS_X / totalResponse.length},${gainToY(v)}`).join(" ")} stroke="yellow" strokeWidth={1} fill="none" />
+            {/* Total response */}
+            <polyline points={totalResponse.map((v, i) => `${i * PIXELS_X / totalResponse.length},${gainToY(v)}`).join(" ")} stroke="yellow" strokeWidth={1} fill="none" />
 
 
-                {parametersWithSamples.map((p, i) => {
-                    // Box at freq/gain
-                    return <rect key={`sample-rect-${i}`} x={freqToX(p.frequency) - 2} y={gainToY(p.gainDb) - 2} width={5} height={5} stroke={p.color} strokeWidth={2} fillOpacity={0.0} />
-                })}
+            {parametersWithSamples.map((p, i) => {
+                // Box at freq/gain
+                return <rect key={`sample-rect-${i}`} x={freqToX(p.frequency) - 2} y={gainToY(p.gainDb) - 2} width={5} height={5} stroke={p.color} strokeWidth={2} fillOpacity={0.0} />
+            })}
 
-            </svg>
-        </div>
+        </svg>
     );
 };
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react';
 
-interface EQControlProps {
+interface KnobControlProps {
   value: number;
   min: number;
   max: number;
@@ -8,7 +8,7 @@ interface EQControlProps {
   logScale?: boolean;
 }
 
-const EQControl: React.FC<EQControlProps> = ({ value, min, max, logScale,  onChange }) => {
+const KnobControl: React.FC<KnobControlProps> = ({ value, min, max, logScale,  onChange }) => {
 
   // const [clickLocation, setClickLocation] = React.useState<[number, number] | null>(null);
 
@@ -88,4 +88,4 @@ const EQControl: React.FC<EQControlProps> = ({ value, min, max, logScale,  onCha
   );
 };
 
-export default EQControl;
+export default KnobControl;
