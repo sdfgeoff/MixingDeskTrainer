@@ -319,10 +319,8 @@ function App() {
     <div style={{ background: COLORS.background, color: COLORS.text, display: 'flex', flexDirection: 'column', gap: PADDING.small, padding: PADDING.medium }}>
       <MinimizablePanel heading="Instructions" color={COLORS.background_colorful_2} startExpanded={true}>
         <p>
-          A modern mixing panel has a lot of buttons and dials, and it can be hard to figure out what they all do. Similarly, a live performance is not the best time to figure
-          out what all the knobs and dials do. The best place to experiment is when no-one else can hear you.
-          This mixing desk is roughly based on the Allen and Heath QU-16, as that is what I have access to. This page provides the controls for a single audio channel,
-          and lets you fiddle with them.
+          A modern mixing panel has a lot of buttons and dials, and it can be hard to figure out what they all do. A live performance and even rehearsals are not the best time to play around, so it can be hard to find a place to practice.
+          This page provides the controls for a single audio channel, and lets you fiddle with them where no-one can hear you. This mixing desk is roughly based on the Allen and Heath QU-16, as that is what I have access to.
         </p>
         <p>
           As a bit of a game, the input to this audio channel can be mutated by some hidden filters. This is to simulate the effect of a bad microphone (eg a lecturn microphone a long way from the speaker).
@@ -330,9 +328,9 @@ function App() {
           the scramble button a few times to find one that you can I can actually hear.
         </p>
 
-        <div style={{display: 'flex', gap: PADDING.small}}>
-        <button onClick={scrambleHiddenEq} >Scramble EQ</button>
-        <button onClick={resetHiddenEq}>Reset EQ</button>
+        <div style={{ display: 'flex', gap: PADDING.small }}>
+          <button onClick={scrambleHiddenEq} >Scramble EQ</button>
+          <button onClick={resetHiddenEq}>Reset EQ</button>
         </div>
       </MinimizablePanel>
       <MinimizablePanel heading="Audio Source" color={COLORS.background_colorful_2} startExpanded={true}>

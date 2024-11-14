@@ -48,7 +48,7 @@ const KnobControl: React.FC<KnobControlProps> = ({ value, min, max, logScale,  o
 
   
   return (<>
-    <input type="range" min={logMinFreq} max={logMaxFreq} step={stepSize} value={derivedVal} onChange={(e) => setValue(parseFloat(e.target.value))} />
+    <input style={{ width: '10em' }}type="range" min={logMinFreq} max={logMaxFreq} step={stepSize} value={derivedVal} onChange={(e) => setValue(parseFloat(e.target.value))} />
 
     {/*
     <input type="range" min={min} max={max} step={(max-min) / 1000.0} value={value} onChange={(e) => setValue(parseFloat(e.target.value))} />

@@ -30,11 +30,9 @@ export const MinimizablePanel: React.FC<MinimizablePanelProps> = ({ children, he
                 <div style={{ display: 'flex', alignItems: 'center', paddingLeft: PADDING.small, paddingRight: PADDING.small }}>
                     <div style={{ textAlign: 'center', fontWeight: 'bold', flexGrow: 1 }}>{heading}</div>
                     <div style={{fontSize: FONTSIZE.small, textDecoration: 'underline'}}>{expanded ? 'minimize' : 'expand'}</div>
-
                 </div>
-
             </div>
-            {expanded && <div style={{ border: `0.2rem solid ${COLORS.primary}`, borderRadius: BORDER_RADIUS, background: COLORS.background, padding: PADDING.medium }}>
+            {<div style={{ border: `0.2rem solid ${COLORS.primary}`, borderRadius: BORDER_RADIUS, background: COLORS.background, padding: PADDING.medium, display: expanded ? 'block' : 'none' }}>
                 {children}
             </div>}
         </div>
