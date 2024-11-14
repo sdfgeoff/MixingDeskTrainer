@@ -5,6 +5,7 @@ export const COLORS = {
     text: '#FFFFFF',
     primary: '#FFFFFF',
     background_colorful: '#0044aa',
+    background_colorful_2:'#aa0044',
 }
 
 export const BORDER_RADIUS = '1rem'
@@ -16,6 +17,7 @@ export const PADDING = {
 }
 
 export const FONTSIZE = {
+    tiny: '0.5rem',
     small: '0.8rem',
     medium: '1rem',
     large: '2rem'
