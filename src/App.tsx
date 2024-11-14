@@ -6,6 +6,7 @@ import { PEQ } from './components/PEQ';
 import { COLORS, PADDING } from './StyleConstants';
 import { Panel } from './components/Panel';
 import { LabelledControl } from './components/LabelledControl';
+import { LEDButtonRound } from './components/LedButtonRound';
 
 
 
@@ -72,10 +73,17 @@ const INITIAL_EQ: ParametricEq = {
 function App() {
   const [mixerSettings, setMixerSettings] = useState<ChannelSettings>({
     parametricEq: INITIAL_EQ,
+    highPassFilter: {
+      frequency: 100,
+      Q: 0.707,
+      enabled: true,
+    },
     preamp: {
       gainDb: 0.5
     }
   });
+
+  console.log(mixerSettings.highPassFilter)
 
   const [audioContext, setAudioContext] = useState<AudioContext>();
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
@@ -92,6 +100,15 @@ function App() {
     }
     return createEqFilterChain(audioContext, numBands);
   }, [audioContext, numBands]);
+
+  const highPassFilter = useMemo(() => {
+    if (!audioContext) {
+      return undefined
+    }
+    const filter = audioContext.createBiquadFilter();
+    filter.type = 'highpass';
+    return filter
+  }, [audioContext]);
 
   const hiddenEqFilters = useMemo(() => {
     if (!audioContext) {
@@ -161,17 +178,20 @@ function App() {
 
 
 
-  // Connect source -> hidden filters -> gain Node -> main filters -----> destination
-  //                                                                 '--> analyzer 
+  // Connect source -> hidden filters -> gain Node -> highpass -> user peq filters -----> destination
+  //                                                                                 '--> analyzer 
   useEffect(() => {
-    if (source && userEqFilters && hiddenEqFilters && audioContext && gainNode && analyzerNode) {
+    if (source && userEqFilters && hiddenEqFilters && audioContext && gainNode && analyzerNode && highPassFilter) {
       const firstHiddenFilter = hiddenEqFilters[0];
       source.connect(firstHiddenFilter);
 
       const lastHiddenFilter = hiddenEqFilters[hiddenEqFilters.length - 1];
-      const firstUserFilter = userEqFilters[0];
       lastHiddenFilter.connect(gainNode);
-      gainNode?.connect(firstUserFilter)
+
+      gainNode.connect(highPassFilter);
+
+      const firstUserFilter = userEqFilters[0];
+      highPassFilter.connect(firstUserFilter)
 
       const lastUserFilter = userEqFilters[userEqFilters.length - 1];
       const destination = audioContext.destination;
@@ -182,11 +202,12 @@ function App() {
       return () => {
         source.disconnect();
         gainNode.disconnect();
+        highPassFilter.disconnect();
         lastHiddenFilter.disconnect();
         lastUserFilter.disconnect();
       }
     }
-  }, [source, userEqFilters, hiddenEqFilters, audioContext]);
+  }, [source, userEqFilters, hiddenEqFilters, audioContext, highPassFilter]);
 
 
 
@@ -202,6 +223,14 @@ function App() {
       });
     }
   }, [userEqFilters, mixerSettings.parametricEq]);
+
+  // Sync changes to the high pass filter
+  useEffect(() => {
+    if (highPassFilter) {
+      highPassFilter.frequency.value = mixerSettings.highPassFilter.enabled ? mixerSettings.highPassFilter.frequency : 0;
+      highPassFilter.Q.value = mixerSettings.highPassFilter.Q;
+    }
+  }, [highPassFilter, mixerSettings.highPassFilter])
 
   // Sync changes from preamp to the gainNode
   useEffect(() => {
@@ -275,19 +304,61 @@ function App() {
       <button onClick={resetMainEq}>Reset EQ</button>
       <div style={{ display: 'flex', flexDirection: 'column', gap: PADDING.medium, alignItems: 'start' }}>
         <div style={{ display: 'flex', alignItems: 'start', gap: PADDING.medium }}>
-          <Panel heading="Preamp">
-            <LabelledControl label="Gain">
-              <KnobControl value={mixerSettings.preamp.gainDb} min={-18} max={18} onChange={(val) => setMixerSettings((prev) => {
-                return {
-                  ...prev,
-                  preamp: {
-                    ...prev.preamp,
-                    gainDb: val
+          <div style={{ display: 'flex', flexDirection: 'column', gap: PADDING.medium }}>
+            <Panel heading="Preamp">
+              <LabelledControl label="Gain">
+                <KnobControl value={mixerSettings.preamp.gainDb} min={-18} max={18} onChange={(val) => setMixerSettings((prev) => {
+                  return {
+                    ...prev,
+                    preamp: {
+                      ...prev.preamp,
+                      gainDb: val
+                    }
                   }
-                }
-              })} />
-            </LabelledControl>
-          </Panel>
+                })} />
+              </LabelledControl>
+
+            </Panel>
+            <Panel heading="HPF">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: PADDING.small }}>
+                <LabelledControl label="Frequency">
+                  <KnobControl
+                    logScale
+                    value={mixerSettings.highPassFilter.frequency}
+                    min={50}
+                    max={20000}
+                    onChange={(val) => setMixerSettings((prev) => {
+                      return {
+                        ...prev,
+                        highPassFilter: {
+                          ...prev.highPassFilter,
+                          frequency: val
+                        }
+                      }
+                    })} />
+                </LabelledControl>
+
+                <LabelledControl label="In">
+                  <LEDButtonRound
+                    on={mixerSettings.highPassFilter.enabled}
+                    onClick={() => setMixerSettings((prev) => ({
+                      ...prev,
+                      highPassFilter: {
+                        ...prev.highPassFilter,
+                        enabled: !prev.highPassFilter.enabled
+
+                      }
+                    }))
+
+                    }
+                    onColor="lightgreen"
+                  />
+
+
+                </LabelledControl>
+              </div>
+            </Panel>
+          </div>
           <Panel heading="Parametric EQ">
             <PEQ
               eqSettings={mixerSettings.parametricEq}
@@ -297,9 +368,10 @@ function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'start', gap: PADDING.medium }}>
-          <Panel heading="Touch Screen">
+          <Panel heading="PEQ">
             <EQView
               eqSettings={mixerSettings.parametricEq}
+              highPassFilter={mixerSettings.highPassFilter}
             />
           </Panel>
           <Panel>

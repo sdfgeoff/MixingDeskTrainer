@@ -15,8 +15,15 @@ export interface Preamp {
     gainDb: number;
 }
 
+export interface HighPassFilter {
+    frequency: number,
+    Q: number,
+    enabled: boolean,
+}
+
 export interface ChannelSettings {
     parametricEq: ParametricEq;
+    highPassFilter: HighPassFilter
     preamp: Preamp
 }
 

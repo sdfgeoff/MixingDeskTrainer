@@ -1,5 +1,13 @@
 import React from 'react';
-import { EQBand, ParametricEq } from './MixerModel';
+import { EQBand, HighPassFilter, ParametricEq } from './MixerModel';
+
+
+/*
+
+There is a great resource here:
+https://arachnoid.com/BiQuadDesigner/index.html
+
+*/
 
 
 export const COLORS = [
@@ -23,7 +31,7 @@ const GAIN_RANGE = MAX_GAIN - MIN_GAIN
 const PIXELS_X = 640
 const PIXELS_Y = 320
 
-const FAKE_SAMPLE_RATE = 411000 // IDK why this is needed. Could probably factor it out somehow
+const FAKE_SAMPLE_RATE = 41100 // IDK why this is needed. Could probably factor it out somehow
 
 const DB_GRID_LINES = [
     -12, -6, 0, 6, 12
@@ -66,9 +74,30 @@ const deriveBandpassFilterConstants = (band: EQBand): FilterConstants => {
     }
 }
 
+const deriveHighpassFilterConstants = (filter: HighPassFilter): FilterConstants => {
+    const { frequency, Q } = filter;
+
+    const omega = 2 * Math.PI * frequency / FAKE_SAMPLE_RATE;
+    const sn = Math.sin(omega);
+    const cs = Math.cos(omega);
+
+    const alpha = sn / (2 * Q);
+
+    const b0 = (1 + cs) / 2;
+    const b1 = -(1 + cs);
+    const b2 = (1 + cs) / 2;
+    const a0 = 1 + alpha;
+    const a1 = -2 * cs;
+    const a2 = 1 - alpha;
+
+    return {
+        a0, a1, a2, b0, b1, b2
+    }
+}
+
 
 const evaluateBiquad = (filterConstants: FilterConstants, freq: number) => {
-    /// Evaluate a biquad peaking filter at a given frequency
+    /// Evaluate a biquad filter at a given frequency
     const { a1, a2, b0, b1, b2 } = filterConstants;
     const phi = Math.pow((Math.sin(2.0 * Math.PI * freq / (2.0 * FAKE_SAMPLE_RATE))), 2.0);
     const r = (Math.pow(b0 + b1 + b2, 2.0) - 4.0 * (b0 * b1 + 4.0 * b0 * b2 + b1 * b2) * phi + 16.0 * b0 * b2 * phi * phi) / (Math.pow(1.0 + a1 + a2, 2.0) - 4.0 * (a1 + 4.0 * a2 + a1 * a2) * phi + 16.0 * a2 * phi * phi);
@@ -100,10 +129,11 @@ const gainToY = (gain: number) => {
 
 
 interface EQViewProps {
-    eqSettings: ParametricEq
+    eqSettings: ParametricEq,
+    highPassFilter: HighPassFilter
 }
 
-const EQView: React.FC<EQViewProps> = ({ eqSettings }) => {
+const EQView: React.FC<EQViewProps> = ({ eqSettings, highPassFilter }) => {
     const { bands } = eqSettings;
 
     const parametersWithColors = React.useMemo(() => {
@@ -122,6 +152,11 @@ const EQView: React.FC<EQViewProps> = ({ eqSettings }) => {
         }
         return points
     }, [])
+
+    const highPassFilterPoints = React.useMemo(() => {
+        const filterConstants = deriveHighpassFilterConstants(highPassFilter)
+        return frequencyPoints.map(f => evaluateBiquad(filterConstants, f))
+    }, [highPassFilter, frequencyPoints])
 
 
     const parametersWithSamples = React.useMemo(() => {
@@ -158,8 +193,12 @@ const EQView: React.FC<EQViewProps> = ({ eqSettings }) => {
             })
             }
 
+            {/* HighPass Filter */}
+            <polyline points={highPassFilterPoints.map((v, i) => `${freqToX(frequencyPoints[i])},${gainToY(v)}`).join(" ")} stroke={highPassFilter.enabled ? "purple" : GRIDLINE_COLOR} strokeWidth={1} fill="none" />
+
+
             {/* Total response */}
-            <polyline points={totalResponse.map((v, i) => `${i * PIXELS_X / totalResponse.length},${gainToY(v)}`).join(" ")} stroke="yellow" strokeWidth={1} fill="none" />
+            <polyline points={totalResponse.map((v, i) => `${freqToX(frequencyPoints[i])},${gainToY(v)}`).join(" ")} stroke={eqSettings.enabled ? "yellow" : GRIDLINE_COLOR} strokeWidth={1} fill="none" />
 
 
             {parametersWithSamples.map((p, i) => {
