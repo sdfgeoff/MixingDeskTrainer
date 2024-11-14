@@ -25,7 +25,6 @@ const MAX_FREQ = 20000
 const MIN_GAIN = -18
 const MAX_GAIN = 18
 
-const FREQ_RANGE = MAX_FREQ - MIN_FREQ
 const GAIN_RANGE = MAX_GAIN - MIN_GAIN
 
 const PIXELS_X = 640
@@ -172,7 +171,7 @@ const EQView: React.FC<EQViewProps> = ({ eqSettings, highPassFilter }) => {
 
 
     const totalResponse = React.useMemo(() => {
-        return frequencyPoints.map((f, i) => parametersWithSamples.reduce((acc, p) => acc + p.samples[i], 0))
+        return frequencyPoints.map((_f, i) => parametersWithSamples.reduce((acc, p) => acc + p.samples[i], 0))
     }, [parametersWithSamples, frequencyPoints])
 
 

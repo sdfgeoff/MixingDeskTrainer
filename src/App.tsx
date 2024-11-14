@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import KnobControl from './components/KnobControl';
-import { EQBand, ChannelSettings, Mod, ParametricEq } from './components/MixerModel';
+import { ChannelSettings, Mod, ParametricEq } from './components/MixerModel';
 import EQView from './components/EQView';
 import { PEQ } from './components/PEQ';
 import { COLORS, FONTSIZE, PADDING } from './StyleConstants';

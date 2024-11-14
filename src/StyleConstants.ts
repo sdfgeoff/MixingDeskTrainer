@@ -1,5 +1,3 @@
-import { CSSProperties } from "react"
-
 export const COLORS = {
     background: '#000000',
     text: '#FFFFFF',
