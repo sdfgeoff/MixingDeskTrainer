@@ -15,7 +15,8 @@ You can:
 
 ## Use it?
 Click here for the current app:
-(Link to come when I've done an deployment)
+
+https://sdfgeoff.github.io/MixingDeskTrainer
 
 ## Development?
 This is done with npm/vite/react/typescript If more people start developing on this project I'll set up stylechecking/linting etc.
