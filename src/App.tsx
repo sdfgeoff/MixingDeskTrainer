@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import KnobControl from './components/KnobControl';
 import { ChannelSettings, Mod, ParametricEq } from './components/MixerModel';
 import EQView from './components/EQView';
@@ -8,6 +8,8 @@ import { MinimizablePanel, Panel } from './components/Panel';
 import { LabelledControl } from './components/LabelledControl';
 import { LEDButtonRound } from './components/LedButtonRound';
 import { LED } from './components/ColoredLed';
+import { useSourceNode } from './hooks/useSourceNode';
+import { useAudioLevel } from './hooks/useAudioLevel';
 
 
 
@@ -33,23 +35,6 @@ const createEqFilterChain = (audioContext: AudioContext, length: number) => {
 }
 
 
-const useSourceNode = (audioElement: HTMLAudioElement | null, audioContext: AudioContext | undefined) => {
-  // You can only get one source node from an element, and sometimes useEffects fire multiple times. This
-  // creates a single source node for the provided element/context using a ref to ensure it happens only once,
-  // but externally acts like a useState so you can respond to changes
-  const sourceRef = useRef<MediaElementAudioSourceNode>();
-  const [source, setSource] = useState<MediaElementAudioSourceNode>();
-
-  useEffect(() => {
-    if (!sourceRef.current && audioElement && audioContext) {
-      const source = audioContext.createMediaElementSource(audioElement);
-      sourceRef.current = source;
-      setSource(source)
-    }
-  });
-
-  return source;
-}
 
 
 const useAudioDestination = (audioContext: AudioContext | undefined, listenTo: AudioNode | undefined) => {
@@ -100,53 +85,6 @@ const INITIAL_SETTINGS: ChannelSettings = {
   preamp: {
     gainDb: 0.5
   }
-}
-
-const useAudioLevel = (audioContext: AudioContext | undefined, listenTo: AudioNode | undefined): number => {
-  const [outputDb, setOutputDb] = useState<number>(-40);
-
-  const outputAnalyzerNode = useMemo(() => {
-    if (!audioContext) {
-      return undefined
-    }
-    const analyzerNode = audioContext.createAnalyser();
-    analyzerNode.fftSize = 256;
-    return analyzerNode
-  }, [audioContext])
-
-  const updateOutputAudioLevel = () => {
-    requestAnimationFrame(updateOutputAudioLevel) // TODO: figure out when to stop this!
-
-    const dataArray = new Float32Array(outputAnalyzerNode?.frequencyBinCount ?? 0);
-
-    outputAnalyzerNode?.getFloatTimeDomainData(dataArray)
-    // Get RMS
-    const rms = Math.sqrt(dataArray.reduce((acc, val) => acc + val * val, 0) / dataArray.length);
-    // Convert to dB
-
-    const db = 20 * Math.log10(rms * 12); // The *12 is so the output level hits peaks at +12 DB
-    setOutputDb(db)
-  }
-
-  useEffect(() => {
-    if (outputAnalyzerNode) {
-      updateOutputAudioLevel()
-    }
-  }, [outputAnalyzerNode])
-
-  useEffect(() => {
-    if (!outputAnalyzerNode || !listenTo) {
-      return () => { }
-    }
-    listenTo.connect(outputAnalyzerNode)
-
-    return () => {
-      listenTo.disconnect(outputAnalyzerNode)
-    }
-
-  }, [listenTo, outputAnalyzerNode])
-
-  return outputDb
 }
 
 
@@ -243,7 +181,7 @@ function App() {
         lastHiddenFilter.disconnect(preampNode);
       }
     }
-  }, [source, userEqFilters, hiddenEqFilters, audioContext, highPassFilter]);
+  }, [source, userEqFilters, hiddenEqFilters, audioContext, highPassFilter, preampNode]);
 
   const outputLevel = useAudioLevel(audioContext, userEqFilters ? userEqFilters[userEqFilters.length - 1] : undefined);
   const preampPeakingDetect = useAudioLevel(audioContext, preampNode);

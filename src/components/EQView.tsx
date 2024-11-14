@@ -10,14 +10,14 @@ https://arachnoid.com/BiQuadDesigner/index.html
 */
 
 
-export const COLORS = [
+const COLORS = [
     "#00FF00",
     "#00EEEE",
     "#3333FF",
     "#FF0000"
 ]
 
-export const GRIDLINE_COLOR = "#444444"
+const GRIDLINE_COLOR = "#444444"
 
 
 const MIN_FREQ = 30
@@ -53,7 +53,7 @@ const deriveBandpassFilterConstants = (band: EQBand): FilterConstants => {
     const centerFreq = band.frequency;
     const gain = band.gainDb;
 
-    var gain_abs = Math.pow(10, gain / 40);
+    const gain_abs = Math.pow(10, gain / 40);
 
     const omega = 2 * Math.PI * centerFreq / FAKE_SAMPLE_RATE;
     const sn = Math.sin(omega);
