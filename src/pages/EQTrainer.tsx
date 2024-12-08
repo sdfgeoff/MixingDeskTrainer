@@ -304,9 +304,6 @@ function App() {
                     </ul>
                     Adjusting the EQ is a bit of an art, and varies by instrument and voice. Too much bass can sound boomy, to little can be tinny. Too much treble can sound harsh, too little can sound muffled. EQing a voice can be challenging as the "Ssss" sound is very close to "T" and "D" sounds, so if you try to remove excessive "Ssss" sounds you may also remove the "T" and "D" sounds making the voice hard to hear.
                 </p>
-
-
-
             </MinimizablePanel>
             <MinimizablePanel heading="Game" color={COLORS.interact_color} startExpanded={false}>
                 <p>
@@ -319,33 +316,7 @@ function App() {
                     <button onClick={resetHiddenEq}>Reset EQ</button>
                 </div>
             </MinimizablePanel>
-            <MinimizablePanel heading="Audio Source" color={COLORS.interact_color} startExpanded={true}>
-                <div style={{ display: 'flex', gap: PADDING.small }}>
-                    <audio ref={setAudioElement} controls onPlay={initAudioContext} />
-
-                    <div style={{ flexGrow: 1 }}>
-                        <select onChange={handleTrackSelect}>
-                            <option value="">Choose existing track</option>
-                            {audioTracks.map((track, index) => (
-                                <option key={index} value={track.src}>
-                                    {track.name}
-                                </option>
-                            ))}
-                        </select> or {' '}
-                        <input type="file" accept="audio/*" onChange={handleFileChange} />
-
-                        <div style={{ opacity: 0.5, fontSize: "0.8rem" }}>
-                            {/* If the current audio source matches one of the known sources, display it's description */}
-                            {audioTrack?.description}
-                        </div>
-                    </div>
-
-                </div>
-            </MinimizablePanel>
-
-
-
-
+            
             <h1>Mixing Desk</h1>
             <button onClick={resetMainEq}>Reset Mixing Desk</button>
             <div style={{ display: 'flex', flexDirection: 'row', gap: PADDING.medium, alignItems: 'start', flexWrap: 'wrap' }}>
@@ -383,6 +354,32 @@ function App() {
                         <LevelIndicator level={outputLevel} />
                     </Panel>
                 </div>
+            </div>
+            
+            <div >
+            <Panel heading="Audio Source" color={COLORS.interact_color}>
+                <div style={{ display: 'flex', gap: PADDING.small }}>
+                    <audio ref={setAudioElement} controls onPlay={initAudioContext} />
+
+                    <div style={{ flexGrow: 1 }}>
+                        <select onChange={handleTrackSelect}>
+                            <option value="">Choose existing track</option>
+                            {audioTracks.map((track, index) => (
+                                <option key={index} value={track.src}>
+                                    {track.name}
+                                </option>
+                            ))}
+                        </select> or {' '}
+                        <input type="file" accept="audio/*" onChange={handleFileChange} />
+
+                        <div style={{ opacity: 0.5, fontSize: "0.8rem" }}>
+                            {/* If the current audio source matches one of the known sources, display it's description */}
+                            {audioTrack?.description}
+                        </div>
+                    </div>
+
+                </div>
+            </Panel>
             </div>
 
         </div>
