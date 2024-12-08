@@ -25,7 +25,7 @@ export const useAudioLevel = (audioContext: AudioContext | undefined, listenTo: 
       const rms = Math.sqrt(dataArray.reduce((acc, val) => acc + val * val, 0) / dataArray.length);
       // Convert to dB
   
-      const db = 20 * Math.log10(rms * 12); // The *12 is so the output level hits peaks at +12 DB
+      const db = 20 * Math.log10(rms * 11); // The scaling is so the output level hits peaks at +12 DB
       setOutputDb(db)
     }, [setOutputDb, outputAnalyzerNode])
   
