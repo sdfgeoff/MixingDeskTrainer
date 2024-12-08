@@ -1,13 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import KnobControl from '../components/KnobControl';
 import { ChannelSettings, Mod, ParametricEq } from '../components/MixerModel';
 import EQView from '../components/EQView';
 import { PEQPanel } from '../components/Panels/PEQPanel';
-import { COLORS, FONTSIZE, PADDING } from '../StyleConstants';
+import { COLORS, PADDING } from '../StyleConstants';
 import { MinimizablePanel, Panel } from '../components/Panel';
-import { LabelledControl } from '../components/LabelledControl';
-import { LEDButtonRound } from '../components/LedButtonRound';
-import { LED } from '../components/ColoredLed';
 import { useSourceNode } from '../hooks/useSourceNode';
 import { useAudioLevel } from '../hooks/useAudioLevel';
 import LevelIndicator from '../components/LevelIndicator';
