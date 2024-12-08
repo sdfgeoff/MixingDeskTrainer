@@ -184,16 +184,16 @@ const EQView: React.FC<EQViewProps> = ({ eqSettings, highPassFilter }) => {
                 return p.samples.map((s, j) => {
                     const gainY = gainToY(s)
                     if (s > 0) {
-                        return <rect key={`bar-positive-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={gainY} width={2} height={PIXELS_Y / 2 - gainY} fill={p.color} />
+                        return <rect key={`bar-positive-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={gainY} width={2} height={PIXELS_Y / 2 - gainY} fill={eqSettings.enabled ? p.color : GRIDLINE_COLOR} />
                     } else {
-                        return <rect key={`bar-negative-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={PIXELS_Y / 2} width={2} height={Math.abs(gainY - PIXELS_Y / 2)} fill={p.color} />
+                        return <rect key={`bar-negative-${i}-${j}`} x={freqToX(frequencyPoints[j]) - i * 2} y={PIXELS_Y / 2} width={2} height={Math.abs(gainY - PIXELS_Y / 2)} fill={eqSettings.enabled ? p.color : GRIDLINE_COLOR} />
                     }
                 })
             })
             }
 
             {/* HighPass Filter */}
-            <polyline points={highPassFilterPoints.map((v, i) => `${freqToX(frequencyPoints[i])},${gainToY(v)}`).join(" ")} stroke={highPassFilter.enabled ? "purple" : GRIDLINE_COLOR} strokeWidth={1} fill="none" />
+            <polyline points={highPassFilterPoints.map((v, i) => `${freqToX(frequencyPoints[i])},${gainToY(v)}`).join(" ")} stroke={highPassFilter.enabled ? "#ff00ff" : GRIDLINE_COLOR} strokeWidth={1} fill="none" />
 
 
             {/* Total response */}
@@ -202,7 +202,7 @@ const EQView: React.FC<EQViewProps> = ({ eqSettings, highPassFilter }) => {
 
             {parametersWithSamples.map((p, i) => {
                 // Box at freq/gain
-                return <rect key={`sample-rect-${i}`} x={freqToX(p.frequency) - 2} y={gainToY(p.gainDb) - 2} width={5} height={5} stroke={p.color} strokeWidth={2} fillOpacity={0.0} />
+                return <rect key={`sample-rect-${i}`} x={freqToX(p.frequency) - 2} y={gainToY(p.gainDb) - 2} width={5} height={5} stroke={eqSettings.enabled ? p.color : GRIDLINE_COLOR} strokeWidth={2} fillOpacity={0.0} />
             })}
 
         </svg>
