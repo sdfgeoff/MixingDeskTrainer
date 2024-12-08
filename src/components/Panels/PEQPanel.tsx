@@ -1,18 +1,18 @@
 
 
 import React from 'react'
-import { EQBand, Mod, ParametricEq } from './MixerModel';
-import KnobControl from './KnobControl';
-import { LabelledControl } from './LabelledControl';
-import { PADDING } from '../StyleConstants';
-import { LEDButtonRound } from './LedButtonRound';
+import { EQBand, Mod, ParametricEq } from '../MixerModel';
+import KnobControl from '../KnobControl';
+import { LabelledControl } from '../LabelledControl';
+import { PADDING } from '../../StyleConstants';
+import { LEDButtonRound } from '../LedButtonRound';
 
 export interface PEQProps {
     eqSettings: ParametricEq;
     onChangeEq: (updater: Mod<ParametricEq>) => void;
 }
 
-export const PEQ: React.FC<PEQProps> = ({ eqSettings, onChangeEq: onChange }) => {
+export const PEQPanel: React.FC<PEQProps> = ({ eqSettings, onChangeEq: onChange }) => {
 
     const { bands, enabled } = eqSettings
 

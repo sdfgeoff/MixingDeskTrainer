@@ -3,7 +3,7 @@ export const COLORS = {
     text: '#FFFFFF',
     primary: '#FFFFFF',
     background_colorful: '#0044aa',
-    background_colorful_2:'#aa0044',
+    interact_color:'#aa0044',
 }
 
 export const BORDER_RADIUS = '1rem'
