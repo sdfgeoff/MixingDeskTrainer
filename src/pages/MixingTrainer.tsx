@@ -13,7 +13,7 @@ const audioTracks: AudioTrack[] = [
 ];
 
 
-const MixingTrainer = () => {
+const MixingTrainer: React.FC = () => {
     const [audioContext, setAudioContext] = useState<AudioContext>();
     const [sourceNode, setSourceNode] = useState<MediaElementAudioSourceNode>();
     const [mixerModel, setMixerModel] = useState<MixerModel>();
@@ -56,7 +56,7 @@ const MixingTrainer = () => {
                 }
             })
         }
-    }, [channelSplitter, channelMerger]);
+    }, [channelSplitter, channelMerger, mixerModel]);
 
     useAudioDestination(audioContext, channelMerger);
 
