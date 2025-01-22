@@ -74,13 +74,13 @@ const deriveBandpassFilterConstants = (band: EQBand): FilterConstants => {
 }
 
 const deriveHighpassFilterConstants = (filter: HighPassFilter): FilterConstants => {
-    const { frequency, Q } = filter;
+    const { frequency, q } = filter;
 
     const omega = 2 * Math.PI * frequency / FAKE_SAMPLE_RATE;
     const sn = Math.sin(omega);
     const cs = Math.cos(omega);
 
-    const alpha = sn / (2 * Q);
+    const alpha = sn / (2 * q);
 
     const b0 = (1 + cs) / 2;
     const b1 = -(1 + cs);

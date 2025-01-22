@@ -1,15 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChannelSettings, Mod, ParametricEq } from '../components/MixerModel';
+import { Filters, Mod, ParametricEq } from '../components/MixerModel';
 import EQView from '../components/EQView';
 import { PEQPanel } from '../components/Panels/PEQPanel';
 import { COLORS, PADDING } from '../StyleConstants';
 import { MinimizablePanel, Panel } from '../components/Panel';
-import { useSourceNode } from '../hooks/useSourceNode';
 import { useAudioLevel } from '../hooks/useAudioLevel';
 import LevelIndicator from '../components/LevelIndicator';
 import PreampPanel from '../components/Panels/PreampPanel';
 import { HighPassFilterPanel } from '../components/Panels/HighPassFilterPanel';
-
+import { useAudioDestination } from '../hooks/useAudioDestination';
+import AudioPanelMono from '../components/Panels/AudioPanelMono';
+import { AudioTrack } from '../components/Panels/TrackPicker';
 
 
 const createEqFilterChain = (audioContext: AudioContext, length: number) => {
@@ -36,28 +37,6 @@ const createEqFilterChain = (audioContext: AudioContext, length: number) => {
 
 
 
-const useAudioDestination = (audioContext: AudioContext | undefined, listenTo: AudioNode | undefined) => {
-    // Connect the listenTo node to the audioContext destination
-    useEffect(() => {
-        if (audioContext && listenTo) {
-            listenTo.connect(audioContext.destination)
-        }
-        return () => {
-            if (audioContext && listenTo) {
-                listenTo.disconnect(audioContext.destination)
-            }
-        }
-    }, [audioContext, listenTo])
-}
-
-
-
-interface AudioTrack {
-    name: string,
-    src: string,
-    description: string
-}
-
 // Define a list of pre-existing audio tracks
 const audioTracks: AudioTrack[] = [
     { name: 'CS Lewis on Prayer', src: 'mono/c.s.lewis-original-recording.mp3', description: "A recording of CS Lewis himself talking about prayer. This was recorded in 1944 and became the book 'Mere Christianity'. This track has some strange recording artifacts due to it's age." },
@@ -66,7 +45,7 @@ const audioTracks: AudioTrack[] = [
 ];
 
 
-const INITIAL_SETTINGS: ChannelSettings = {
+const INITIAL_SETTINGS: Filters = {
     parametricEq: {
         bands: [
             { gainDb: 0, frequency: 60, q: 1, name: 'LF' },
@@ -78,7 +57,7 @@ const INITIAL_SETTINGS: ChannelSettings = {
     },
     highPassFilter: {
         frequency: 100,
-        Q: 0.707,
+        q: 0.707,
         enabled: true,
     },
     preamp: {
@@ -87,17 +66,13 @@ const INITIAL_SETTINGS: ChannelSettings = {
 }
 
 
-function App() {
-    const [mixerSettings, setMixerSettings] = useState<ChannelSettings>(INITIAL_SETTINGS);
+function EQTrainer() {
+    const [mixerSettings, setMixerSettings] = useState<Filters>(INITIAL_SETTINGS);
 
     const [audioContext, setAudioContext] = useState<AudioContext>();
-    const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-    const [audioTrack, setAudioTrack] = useState<AudioTrack>();
-    const source = useSourceNode(audioElement, audioContext);
-
+    const [sourceNode, setSourceNode] = useState<MediaElementAudioSourceNode>();
 
     const numBands = mixerSettings.parametricEq.bands.length;
-
 
     const userEqFilters = useMemo(() => {
         if (!audioContext) {
@@ -129,41 +104,12 @@ function App() {
         return audioContext.createGain();
     }, [audioContext]);
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) {
-            return
-        }
-        setAudioTrack({
-            name: file?.name ?? 'Unknown',
-            description: 'User uploaded track',
-            src: URL.createObjectURL(file)
-        })
-    }
-
-    const handleTrackSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        // Find track by src and event.target.value
-        const track = audioTracks.find(t => t.src === event.target.value);
-        setAudioTrack(track);
-    };
-
-    useEffect(() => {
-        if (audioElement) {
-            audioElement.src = audioTrack?.src ?? '';
-        }
-    }, [audioTrack, audioElement]);
-
-    const initAudioContext = () => {
-        // Have to wait for user interactino with page before this can be done
-        setAudioContext((old) => old ?? new AudioContext());
-    }
-
 
     // Connect source -> hidden filters -> gain Node -> highpass -> user peq filters -----> destination
     useEffect(() => {
-        if (source && userEqFilters && hiddenEqFilters && audioContext && preampNode && highPassFilter) {
+        if (sourceNode && userEqFilters && hiddenEqFilters && audioContext && preampNode && highPassFilter) {
             const firstHiddenFilter = hiddenEqFilters[0];
-            source.connect(firstHiddenFilter);
+            sourceNode.connect(firstHiddenFilter);
 
             const lastHiddenFilter = hiddenEqFilters[hiddenEqFilters.length - 1];
             lastHiddenFilter.connect(preampNode);
@@ -174,13 +120,13 @@ function App() {
             highPassFilter.connect(firstUserFilter)
 
             return () => {
-                source.disconnect(firstHiddenFilter);
+                sourceNode.disconnect(firstHiddenFilter);
                 preampNode.disconnect(highPassFilter);
                 highPassFilter.disconnect(firstUserFilter);
                 lastHiddenFilter.disconnect(preampNode);
             }
         }
-    }, [source, userEqFilters, hiddenEqFilters, audioContext, highPassFilter, preampNode]);
+    }, [sourceNode, userEqFilters, hiddenEqFilters, audioContext, highPassFilter, preampNode]);
 
     const outputLevel = useAudioLevel(audioContext, userEqFilters ? userEqFilters[userEqFilters.length - 1] : undefined);
     const preampLevel = useAudioLevel(audioContext, preampNode);
@@ -206,7 +152,7 @@ function App() {
     useEffect(() => {
         if (highPassFilter) {
             highPassFilter.frequency.value = mixerSettings.highPassFilter.enabled ? mixerSettings.highPassFilter.frequency : 0;
-            highPassFilter.Q.value = mixerSettings.highPassFilter.Q;
+            highPassFilter.Q.value = mixerSettings.highPassFilter.q;
         }
     }, [highPassFilter, mixerSettings.highPassFilter])
 
@@ -282,22 +228,26 @@ function App() {
                 <h2>Parametric Equalizer (PEQ)</h2>
                 <p>
                     The parametric equalizer is used to adjust how loud the low frequencies are compared to the high frequencies.
-                    
+
                     This particular parametric equalizer has 4 bands, each of which can be adjusted to boost or cut any frequency range. The abbreviations under the knobs are:
-                    <ul>
-                        <li>LF - Low Frequency</li>
-                        <li>LM - Low Midrange</li>
-                        <li>HM - High Midrange</li>
-                        <li>HF - High Frequency</li>
-                    </ul>
+                </p>
+                <ul>
+                    <li>LF - Low Frequency</li>
+                    <li>LM - Low Midrange</li>
+                    <li>HM - High Midrange</li>
+                    <li>HF - High Frequency</li>
+                </ul>
+                <p>
                     But the frequency that is actually used is dependant on the Frequency knob for that band.
 
                     Each band has 3 controls:
-                    <ul>
-                        <li>Gain - How much to boost or cut the frequency range</li>
-                        <li>Frequency - What frequency to boost or cut</li>
-                        <li>Width - How wide the frequency range is. Although this is labelled "width" (as that is the easy way to think about it), the knob may go in the opposite direction to what you expect. This is because old analog desks had a concept called "Q" which is the inverse of "width"</li>
-                    </ul>
+                </p>
+                <ul>
+                    <li>Gain - How much to boost or cut the frequency range</li>
+                    <li>Frequency - What frequency to boost or cut</li>
+                    <li>Width - How wide the frequency range is. Although this is labelled "width" (as that is the easy way to think about it), the knob may go in the opposite direction to what you expect. This is because old analog desks had a concept called "Q" which is the inverse of "width"</li>
+                </ul>
+                <p>
                     Adjusting the EQ is a bit of an art, and varies by instrument and voice. Too much bass can sound boomy, to little can be tinny. Too much treble can sound harsh, too little can sound muffled. EQing a voice can be challenging as the "Ssss" sound is very close to "T" and "D" sounds, so if you try to remove excessive "Ssss" sounds you may also remove the "T" and "D" sounds making the voice hard to hear.
                 </p>
             </MinimizablePanel>
@@ -312,7 +262,7 @@ function App() {
                     <button onClick={resetHiddenEq}>Reset EQ</button>
                 </div>
             </MinimizablePanel>
-            
+
             <h1>Mixing Desk</h1>
             <button onClick={resetMainEq}>Reset Mixing Desk</button>
             <div style={{ display: 'flex', flexDirection: 'row', gap: PADDING.medium, alignItems: 'start', flexWrap: 'wrap' }}>
@@ -351,36 +301,14 @@ function App() {
                     </Panel>
                 </div>
             </div>
-            
-            <div >
+
             <Panel heading="Audio Source" color={COLORS.interact_color}>
-                <div style={{ display: 'flex', gap: PADDING.small }}>
-                    <audio ref={setAudioElement} controls onPlay={initAudioContext} />
-
-                    <div style={{ flexGrow: 1 }}>
-                        <select onChange={handleTrackSelect}>
-                            <option value="">Choose existing track</option>
-                            {audioTracks.map((track, index) => (
-                                <option key={index} value={track.src}>
-                                    {track.name}
-                                </option>
-                            ))}
-                        </select> or {' '}
-                        <input type="file" accept="audio/*" onChange={handleFileChange} />
-
-                        <div style={{ opacity: 0.5, fontSize: "0.8rem" }}>
-                            {/* If the current audio source matches one of the known sources, display it's description */}
-                            {audioTrack?.description}
-                        </div>
-                    </div>
-
-                </div>
+                <AudioPanelMono audioTracks={audioTracks} setAudioContext={setAudioContext} setAudioSource={setSourceNode} />
             </Panel>
-            </div>
 
         </div>
     );
 }
 
 
-export default App;
+export default EQTrainer;
