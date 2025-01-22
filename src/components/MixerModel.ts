@@ -17,7 +17,7 @@ export interface Preamp {
 
 export interface HighPassFilter {
     frequency: number,
-    Q: number,
+    q: number,
     enabled: boolean,
 }
 
