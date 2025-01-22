@@ -3,9 +3,9 @@ import React from "react";
 export interface AudioTrack {
     name: string,
     src: string,
-    description: string
+    description: string,
+    source?: "user" | "default"
 }
-
 
 
 const TrackPicker: React.FC<{ audioTracks: AudioTrack[], onSelect: (track: AudioTrack | undefined) => void, selectedTrack: AudioTrack | undefined }> = ({ audioTracks, onSelect, selectedTrack }) => {
@@ -17,14 +17,18 @@ const TrackPicker: React.FC<{ audioTracks: AudioTrack[], onSelect: (track: Audio
         onSelect({
             name: file?.name ?? 'Unknown',
             description: 'User uploaded track',
-            src: URL.createObjectURL(file)
+            src: URL.createObjectURL(file),
+            source: 'user'
         })
     }
 
     const handleTrackSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
         // Find track by src and event.target.value
         const track = audioTracks.find(t => t.src === event.target.value);
-        onSelect(track);
+        onSelect(track ? {
+            ...track,
+            source: 'default'
+        } : undefined);
     };
 
     return <div style={{ flexGrow: 1 }}>

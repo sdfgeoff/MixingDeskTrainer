@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChannelSettings, Mod, ParametricEq } from '../components/MixerModel';
+import { Filters, Mod, ParametricEq } from '../components/MixerModel';
 import EQView from '../components/EQView';
 import { PEQPanel } from '../components/Panels/PEQPanel';
 import { COLORS, PADDING } from '../StyleConstants';
@@ -9,7 +9,7 @@ import LevelIndicator from '../components/LevelIndicator';
 import PreampPanel from '../components/Panels/PreampPanel';
 import { HighPassFilterPanel } from '../components/Panels/HighPassFilterPanel';
 import { useAudioDestination } from '../hooks/useAudioDestination';
-import AudioSourcePanel from '../components/Panels/AudioSource';
+import AudioPanelMono from '../components/Panels/AudioPanelMono';
 import { AudioTrack } from '../components/Panels/TrackPicker';
 
 
@@ -45,7 +45,7 @@ const audioTracks: AudioTrack[] = [
 ];
 
 
-const INITIAL_SETTINGS: ChannelSettings = {
+const INITIAL_SETTINGS: Filters = {
     parametricEq: {
         bands: [
             { gainDb: 0, frequency: 60, q: 1, name: 'LF' },
@@ -67,7 +67,7 @@ const INITIAL_SETTINGS: ChannelSettings = {
 
 
 function EQTrainer() {
-    const [mixerSettings, setMixerSettings] = useState<ChannelSettings>(INITIAL_SETTINGS);
+    const [mixerSettings, setMixerSettings] = useState<Filters>(INITIAL_SETTINGS);
 
     const [audioContext, setAudioContext] = useState<AudioContext>();
     const [sourceNode, setSourceNode] = useState<MediaElementAudioSourceNode>();
@@ -303,7 +303,7 @@ function EQTrainer() {
             </div>
 
             <Panel heading="Audio Source" color={COLORS.interact_color}>
-                <AudioSourcePanel audioTracks={audioTracks} setAudioContext={setAudioContext} setAudioSource={setSourceNode} />
+                <AudioPanelMono audioTracks={audioTracks} setAudioContext={setAudioContext} setAudioSource={setSourceNode} />
             </Panel>
 
         </div>
