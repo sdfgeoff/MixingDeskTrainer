@@ -9,7 +9,7 @@ import { MixerModel } from '../components/MixerModel';
 
 // Define a list of pre-existing audio tracks
 const audioTracks: AudioTrack[] = [
-    { name: 'Mighty Name', src: 'multitrack/MightyName/data.json', description: "Mighty Name sung at our local church"},
+    { name: 'Mighty Name', src: 'multitrack/MightyName/data.json', description: "Mighty Name sung at our local church" },
 ];
 
 
@@ -20,10 +20,10 @@ const MixingTrainer: React.FC = () => {
 
 
     const channelSplitter = useMemo(() => {
-      if (audioContext) {
-        const splitter = audioContext.createChannelSplitter(32);
-        return splitter;
-      }
+        if (audioContext) {
+            const splitter = audioContext.createChannelSplitter(32);
+            return splitter;
+        }
     }, [audioContext]);
 
     const channelMerger = useMemo(() => {
@@ -65,6 +65,9 @@ const MixingTrainer: React.FC = () => {
         <div style={{ background: COLORS.background, color: COLORS.text, display: 'flex', flexDirection: 'column', gap: PADDING.small, padding: PADDING.medium }}>
             <Panel heading="Audio Source" color={COLORS.interact_color}>
                 <AudioPanelMulti audioTracks={audioTracks} setAudioContext={setAudioContext} setAudioSource={setSourceNode} setMixerModel={setMixerModel} />
+            </Panel>
+            <Panel heading="Mixer" color={COLORS.background_colorful}>
+                This is a work in progress. The mixer will be displayed here. If you have a multichannel ogg file, the first 32 channels will be rounted to your speakers
             </Panel>
         </div>
     )
