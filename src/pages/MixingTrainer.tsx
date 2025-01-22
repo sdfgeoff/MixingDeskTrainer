@@ -40,11 +40,21 @@ const MixingTrainer = () => {
         }
     }, [sourceNode, channelSplitter]);
 
+
+
     // Connect channel splitter to channel merger
     useEffect(() => {
         if (channelSplitter && channelMerger) {
-            channelSplitter.connect(channelMerger, 10, 0);
-            channelSplitter.connect(channelMerger, 11, 1);
+
+            // For now, mix all the channels together
+            mixerModel?.busses[0].bands.forEach((band) => {
+                const channelId = band.channelSource;
+                const channelData = mixerModel?.channels[channelId];
+                if (channelData) {
+                    channelSplitter.connect(channelMerger, channelId, 0);
+                    channelSplitter.connect(channelMerger, channelId, 1);
+                }
+            })
         }
     }, [channelSplitter, channelMerger]);
 

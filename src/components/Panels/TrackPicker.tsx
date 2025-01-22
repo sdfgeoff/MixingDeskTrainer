@@ -32,8 +32,8 @@ const TrackPicker: React.FC<{ audioTracks: AudioTrack[], onSelect: (track: Audio
     };
 
     return <div style={{ flexGrow: 1 }}>
-        <select onChange={handleTrackSelect}>
-            <option value="">Choose existing track</option>
+        <select onChange={handleTrackSelect} value={selectedTrack?.src ?? ''}>
+            <option value={""}>Choose existing track</option>
             {audioTracks.map((track, index) => (
                 <option key={index} value={track.src}>
                     {track.name}
