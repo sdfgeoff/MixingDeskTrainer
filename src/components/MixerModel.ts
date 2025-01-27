@@ -36,7 +36,6 @@ export interface ChannelSettings {
     source: { channel: number }
     filters: Filters
     mute: MuteSettings
-    pafl: PaflSettings
     pan: PanSettings
 }
 
@@ -44,9 +43,6 @@ export interface MuteSettings {
     state: boolean
 }
 
-export interface PaflSettings {
-    state: boolean
-}
 
 export interface FaderSettings {
     gainDb: number

@@ -16,6 +16,7 @@ import { LEVEL_INDICATOR_LEDS_FULL } from "../components/LevelIndicatorPresets";
 import { useAudioLevel } from '../hooks/useAudioLevel';
 import PreampPanel from '../components/Panels/PreampPanel';
 import PanPanel from '../components/Panels/PanPanel';
+import { LED } from '../components/ColoredLed';
 
 
 // Define a list of pre-existing audio tracks
@@ -37,6 +38,7 @@ const MixingTrainer: React.FC = () => {
     const [mixerModel, setMixerModel] = useState<MixerModel>(DEFAULT_MIXER_MODEL);
 
     const [selectedChannel, setSelectedChannel] = useState<number>(0);
+    const [paflChannel, setPaflChannel] = useState<number>();
 
     const numChannels = useMemo(() => {
         return mixerModel.channels.map((channel) => channel.source.channel).reduce((a, b) => Math.max(a, b), 0) + 1;
@@ -61,6 +63,12 @@ const MixingTrainer: React.FC = () => {
         if (sourceNode && channelSplitter) {
             sourceNode.connect(channelSplitter);
         }
+
+        return () => {
+            if (sourceNode && channelSplitter) {
+                sourceNode.disconnect(channelSplitter);
+            }
+        }
     }, [sourceNode, channelSplitter]);
 
     /////////////////////////////// PREAMPS ///////////////////////////////
@@ -81,6 +89,14 @@ const MixingTrainer: React.FC = () => {
                 channelSplitter.connect(node, i);
             })
         }
+
+        return () => {
+            if (channelSplitter && preampNodes) {
+                preampNodes.forEach((node, i) => {
+                    channelSplitter.disconnect(node, i);
+                })
+            }
+        }
     }, [channelSplitter, preampNodes]);
 
     // Sync preamp nodes with mixer model -> preamp and mute
@@ -88,12 +104,49 @@ const MixingTrainer: React.FC = () => {
         if (preampNodes) {
             mixerModel.channels.forEach((channel, i) => {
                 const gainNorm = Math.pow(10, channel.filters.preamp.gainDb / 20);
-                preampNodes[i].gain.value = gainNorm * (channel.mute.state ? 0 : 1);
+                preampNodes[i].gain.value = gainNorm
             })
         }
     }, [mixerModel, preampNodes]);
 
-    console.log()
+    /////////////////////////////// MUTE NODES ///////////////////////////////
+    // Mute Nodes
+    const muteNodes = useMemo(() => {
+        if (audioContext) {
+            return Array.from({ length: numChannels }, () => {
+                const node = audioContext.createGain();
+                node.gain.value = 1;
+                return node;
+            })
+        }
+    }, [audioContext, numChannels]);
+
+    // Connect preamp nodes to mute nodes
+    useEffect(() => {
+        if (preampNodes && muteNodes) {
+            preampNodes.forEach((node, i) => {
+                node.connect(muteNodes[i]);
+            })
+        }
+
+        return () => {
+            if (preampNodes && muteNodes) {
+                preampNodes.forEach((node, i) => {
+                    node.disconnect(muteNodes[i]);
+                })
+            }
+        }
+    }, [preampNodes, muteNodes]);
+
+    // Sync mute nodes with mixer model
+    useEffect(() => {
+        if (muteNodes) {
+            mixerModel.channels.forEach((channel, i) => {
+                const mute = channel.mute.state;
+                muteNodes[i].gain.value = mute ? 0 : 1;
+            })
+        }
+    }, [mixerModel, muteNodes]);
 
 
     /////////////////////////////// PAN NODES ///////////////////////////////
@@ -113,13 +166,22 @@ const MixingTrainer: React.FC = () => {
         }
     }, [audioContext, numChannels]);
 
-    // Connect mute nodes to pan nodes
+    // Connect mute nodes to mute nodes
     useEffect(() => {
-        if (preampNodes && panNodes) {
-            preampNodes.forEach((node, i) => {
+        if (muteNodes && panNodes) {
+            muteNodes.forEach((node, i) => {
                 node.connect(panNodes[i].left);
                 node.connect(panNodes[i].right);
             })
+        }
+
+        return () => {
+            if (muteNodes && panNodes) {
+                muteNodes.forEach((node, i) => {
+                    node.disconnect(panNodes[i].left);
+                    node.disconnect(panNodes[i].right);
+                })
+            }
         }
     }, [preampNodes, panNodes]);
 
@@ -162,6 +224,15 @@ const MixingTrainer: React.FC = () => {
                 panNodes[inputChannel].right.connect(node.right);
             })
         }
+        return () => {
+            if (panNodes && faderNodes) {
+                faderNodes.forEach((node, i) => {
+                    const inputChannel = bus.bands[i].channelSource;
+                    panNodes[inputChannel].left.disconnect(node.left);
+                    panNodes[inputChannel].right.disconnect(node.right);
+                })
+            }
+        }
     }, [panNodes, faderNodes, bus]);
 
     // Sync fader nodes with mixer model
@@ -185,12 +256,24 @@ const MixingTrainer: React.FC = () => {
     // Connect fader nodes to channel merger
     useEffect(() => {
         if (faderNodes && channelMerger) {
-            faderNodes.forEach((node) => {
-                node.left.connect(channelMerger, 0, 0);
-                node.right.connect(channelMerger, 0, 1);
+            faderNodes.forEach((node, i) => {
+                if (paflChannel === undefined || paflChannel === i) {
+                    node.left.connect(channelMerger, 0, 0);
+                    node.right.connect(channelMerger, 0, 1);
+                }
             })
         }
-    }, [faderNodes, channelMerger]);
+        return () => {
+            if (faderNodes && channelMerger) {
+                faderNodes.forEach((node, i) => {
+                    if (paflChannel === undefined || paflChannel === i) {
+                        node.left.disconnect(channelMerger, 0, 0);
+                        node.right.disconnect(channelMerger, 0, 1);
+                    }
+                })
+            }
+        }
+    }, [faderNodes, channelMerger, paflChannel]);
 
 
     /////////////////////////// Output Fader ///////////////////////////
@@ -215,6 +298,7 @@ const MixingTrainer: React.FC = () => {
             outputFaderNode.gain.value = Math.pow(10, bus.output_gain.gainDb / 20);
         }
     }, [bus, outputFaderNode]);
+
 
 
     useAudioDestination(audioContext, outputFaderNode);
@@ -320,7 +404,7 @@ const MixingTrainer: React.FC = () => {
                             const channelId = band.channelSource;
                             return <div key={index} style={{ display: "flex", flexDirection: "column", gap: PADDING.small }}>
                                 <LabelledControl label="Mute" position="top">
-                                    <LEDButtonRound onColor="#ff5555" round={false} on={
+                                    <LEDButtonRound onColor="#ff5555" shape="rectangle" on={
                                         mixerModel?.channels[band.channelSource].mute.state ?? false
                                     }
                                         onClick={(
@@ -350,8 +434,18 @@ const MixingTrainer: React.FC = () => {
                                     />
                                 </LabelledControl>
 
-                                <LabelledControl label="Sel">
-                                    <LEDButtonRound onColor="#55ff55" offColor="#557766" on={selectedChannel === channelId} onClick={() => setSelectedChannel(channelId)} semiTransparent={true} />
+                                <LabelledControl label="Sel" position="top">
+                                    <LEDButtonRound onColor="#55ff55" offColor="#557766" on={selectedChannel === channelId} semiTransparent={false} onClick={() => setSelectedChannel(channelId)} />
+                                </LabelledControl>
+
+                                <LabelledControl label="PAFL" position="top">
+                                    <LEDButtonRound shape="round" onColor="red" on={paflChannel === channelId} semiTransparent={false} onClick={() => setPaflChannel((channel) => {
+                                        if (channel === channelId) {
+                                            return undefined;
+                                        } else {
+                                            return channelId;
+                                        }
+                                    })} />
                                 </LabelledControl>
 
                                 <LevelIndicatorFromNode audioContext={audioContext} listenTo={preampNodes?.[channelId]} indicatorLedGains={LEVEL_INDICATOR_LEDS_BASIC} />
@@ -373,8 +467,30 @@ const MixingTrainer: React.FC = () => {
                     </div>
                 </Panel>
                 <Panel heading="Out">
-                    <div style={{ display: "flex" }}>
-                        <LabelledControl label="Master">
+
+                    <div style={{display: "flex", flexDirection: "column", gap: PADDING.small}}>
+
+                        <LevelIndicatorFromNode audioContext={audioContext} listenTo={outputFaderNode} indicatorLedGains={LEVEL_INDICATOR_LEDS_FULL} />
+
+                        <LabelledControl label="PAFL">
+                            <LED color="red" on={paflChannel !== undefined} />
+                        </LabelledControl>
+
+                        <div style={{
+                            backgroundColor: COLORS.background_colorful,
+                            borderRadius: BORDER_RADIUS,
+                            height: '2.5rem',
+                            width: '4rem',
+                            padding: PADDING.small,
+                            textAlign: 'center',
+                            fontSize: FONTSIZE.small,
+
+                        }}>
+                            {bus.name}
+
+                        </div>
+
+                        <LabelledControl label="Output">
                             <FaderControl value={bus.output_gain.gainDb} min={-50} max={10} onChange={(newValue) => {
                                 setMixerModel((oldModel) => {
                                     if (!oldModel) {
@@ -400,7 +516,6 @@ const MixingTrainer: React.FC = () => {
                             }} />
                         </LabelledControl>
 
-                        <LevelIndicatorFromNode audioContext={audioContext} listenTo={outputFaderNode} indicatorLedGains={LEVEL_INDICATOR_LEDS_FULL} />
                     </div>
                 </Panel>
             </div>
