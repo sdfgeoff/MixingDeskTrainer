@@ -183,7 +183,7 @@ const MixingTrainer: React.FC = () => {
                 })
             }
         }
-    }, [preampNodes, panNodes]);
+    }, [muteNodes, panNodes]);
 
     // Sync pan nodes with mixer model
     useEffect(() => {
