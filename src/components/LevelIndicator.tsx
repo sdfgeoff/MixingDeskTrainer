@@ -1,6 +1,8 @@
 import { FONTSIZE, PADDING } from "../StyleConstants";
 import { LED } from "./ColoredLed";
 
+export const PK_THRESHOLD = 12
+
 export interface IndicatorLedGain {
     color: string,
     threshold: number,
@@ -8,7 +10,7 @@ export interface IndicatorLedGain {
 }
 
 const LEVEL_INDICATOR_LEDS_FULL: IndicatorLedGain[] = [
-    { label: 'Pk', color: 'red', threshold: 12 },
+    { label: 'Pk', color: 'red', threshold: PK_THRESHOLD },
     { label: '+9', color: 'yellow', threshold: 9 },
     { label: '+6', color: 'yellow', threshold: 6 },
     { label: '+3', color: 'yellow', threshold: 3 },
@@ -23,7 +25,7 @@ const LEVEL_INDICATOR_LEDS_FULL: IndicatorLedGain[] = [
 ]
 
 export const LEVEL_INDICATOR_LEDS_BASIC: IndicatorLedGain[] = [
-    { label: 'Pk', color: 'red', threshold: 12 },
+    { label: 'Pk', color: 'red', threshold: PK_THRESHOLD },
     { label: '0', color: 'green', threshold: 0 },
     { label: 'Sig', color: 'green', threshold: -30 },
 ]
