@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { PADDING } from "../../StyleConstants";
 import TrackPicker, { AudioTrack } from "./TrackPicker";
 import AudioPlayer from "./AudioPlayer";
-import { Filters, MixerModel } from "../MixerModel";
+import { MixerModel } from "../MixerModel";
 import { useJsonUrl } from "../../hooks/useJsonUrl";
+import { DEFAULT_MIXER_MODEL } from "../MixerModelDefault";
 
 
 
@@ -11,60 +12,7 @@ export interface AudioPanelProps {
     audioTracks: AudioTrack[],
     setAudioSource: (source: MediaElementAudioSourceNode | undefined) => void;
     setAudioContext: (context: AudioContext | undefined) => void;
-    setMixerModel: (model: MixerModel | undefined) => void;
-}
-
-
-const DEFAULT_CHANNELS = 16
-const DEFAULT_CHANNEL_FILTERS: Filters = {
-    parametricEq: {
-        bands: [
-            { frequency: 100, gainDb: 0, q: 1, name: 'LF' },
-            { frequency: 1000, gainDb: 0, q: 1, name: 'LM' },
-            { frequency: 5000, gainDb: 0, q: 1, name: 'HM' },
-            { frequency: 10000, gainDb: 0, q: 1, name: 'HF' }
-        ],
-        enabled: true
-    },
-    highPassFilter: {
-        frequency: 50,
-        q: 1,
-        enabled: true
-    },
-    preamp: {
-        gainDb: 0
-    }
-}
-const DEFAULT_MIXER_MODEL: MixerModel = {
-    source: {
-        audioUrl: ''
-    },
-    channels: Array.from({ length: DEFAULT_CHANNELS }, (_, i) => ({
-        name: `Channel ${i + 1}`,
-        source: {
-            channel: i
-        },
-        mute: {
-            state: false
-        },
-        pafl: {
-            state: false
-        },
-        filters: DEFAULT_CHANNEL_FILTERS
-    }),
-    ),
-    channel_links: [],
-    busses: [
-        {
-            name: 'Main',
-            bands: Array.from({ length: 2 }, (_, i) => ({
-                channelSource: i,
-                fader: {
-                    gainDb: 0
-                }
-            }))
-        }
-    ]
+    setMixerModel: (model: MixerModel) => void;
 }
 
 
@@ -73,16 +21,20 @@ const AudioPanelMulti: React.FC<AudioPanelProps> = ({ audioTracks, setAudioSourc
 
     const dataUrl = audioTrack?.source == 'default' ? audioTrack?.src : undefined
     const modelResponse = useJsonUrl<MixerModel>(dataUrl);
-    const mixerModel: MixerModel | undefined = useMemo(() => {
+    const mixerModel: MixerModel = useMemo(() => {
         if (!audioTrack) {
-            return undefined;
+            return DEFAULT_MIXER_MODEL;
         }
         if (audioTrack.source == 'default') {
-            return modelResponse.data;
+            if (modelResponse.state === 'loaded') {
+                return modelResponse.data;
+            }
+            return DEFAULT_MIXER_MODEL;
         }
         return {
             ...DEFAULT_MIXER_MODEL,
             source: {
+                ...DEFAULT_MIXER_MODEL.source,
                 audioUrl: audioTrack.src
             }
         }

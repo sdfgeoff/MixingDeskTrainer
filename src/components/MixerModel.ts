@@ -27,22 +27,22 @@ export interface Filters {
     preamp: Preamp
 }
 
+export interface PanSettings {
+    pan: number
+}
 
 export interface ChannelSettings {
     name: string;
     source: { channel: number }
     filters: Filters
     mute: MuteSettings
-    pafl: PaflSettings
+    pan: PanSettings
 }
 
 export interface MuteSettings {
     state: boolean
 }
 
-export interface PaflSettings {
-    state: boolean
-}
 
 export interface FaderSettings {
     gainDb: number
@@ -56,6 +56,9 @@ export interface BusBand {
 export interface Bus {
     name: string,
     bands: BusBand[]
+    output_gain: {
+        gainDb: number
+    }
 }
 
 export interface SourceSettings {
