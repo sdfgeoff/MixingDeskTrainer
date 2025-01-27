@@ -6,12 +6,11 @@ export interface LEDButtonRound {
     onColor: string
     round?: boolean
     semiTransparent?: boolean
+    offColor?: string
 }
 
-const offColor = 'grey'
 
-
-export const LEDButtonRound: React.FC<LEDButtonRound> = ({ on, onClick, onColor, round = true, semiTransparent = true }) => {
+export const LEDButtonRound: React.FC<LEDButtonRound> = ({ on, onClick, onColor, round = true, semiTransparent = true, offColor = 'grey' }) => {
     return (
         <button style={{
             width: '4rem',

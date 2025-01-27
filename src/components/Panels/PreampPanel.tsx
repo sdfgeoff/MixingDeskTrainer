@@ -16,7 +16,7 @@ const PreampPanel: React.FC<PreampProps> = ({ preamp, onChangePreamp: onChange, 
   return <LabelledControl label="Gain">
     <div style={{ display: "flex", justifyContent: "end", gap: PADDING.small, fontSize: FONTSIZE.small }}>Pk:<LED color="red" on={preampLevel > PK_THRESHOLD} />
     </div>
-    <KnobControl value={preamp.gainDb} min={-40} max={18} onChange={(val) => onChange((prev) => {
+    <KnobControl value={preamp.gainDb} min={-40} max={50} onChange={(val) => onChange((prev) => {
       return {
         ...prev,
         gainDb: val

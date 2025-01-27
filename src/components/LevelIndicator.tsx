@@ -9,7 +9,7 @@ export interface IndicatorLedGain {
     label: string
 }
 
-const LEVEL_INDICATOR_LEDS_FULL: IndicatorLedGain[] = [
+export const LEVEL_INDICATOR_LEDS_FULL: IndicatorLedGain[] = [
     { label: 'Pk', color: 'red', threshold: PK_THRESHOLD },
     { label: '+9', color: 'yellow', threshold: 9 },
     { label: '+6', color: 'yellow', threshold: 6 },

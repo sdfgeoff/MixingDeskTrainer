@@ -41,7 +41,9 @@ export const DEFAULT_MIXER_MODEL: MixerModel = {
     },
     channels: Array.from({ length: DEFAULT_CHANNELS }, (_, i) => ({
         name: `Channel ${i + 1}`,
-        pan: 0,
+        pan: {
+            pan: 0
+        },
         source: {
             channel: i
         },
@@ -63,7 +65,10 @@ export const DEFAULT_MIXER_MODEL: MixerModel = {
                 fader: {
                     gainDb: 0
                 }
-            }))
+            })),
+            output_gain: {
+                gainDb: 0
+            }
         }
     ]
 }
