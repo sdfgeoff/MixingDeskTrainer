@@ -1,7 +1,13 @@
-import { PADDING } from "../StyleConstants";
+import { FONTSIZE, PADDING } from "../StyleConstants";
 import { LED } from "./ColoredLed";
 
-const LEVEL_INDICATOR_LEDS = [
+export interface IndicatorLedGain {
+    color: string,
+    threshold: number,
+    label: string
+}
+
+const LEVEL_INDICATOR_LEDS_FULL: IndicatorLedGain[] = [
     { label: 'Pk', color: 'red', threshold: 12 },
     { label: '+9', color: 'yellow', threshold: 9 },
     { label: '+6', color: 'yellow', threshold: 6 },
@@ -14,20 +20,27 @@ const LEVEL_INDICATOR_LEDS = [
     { label: '-16', color: 'green', threshold: -16 },
     { label: '-20', color: 'green', threshold: -20 },
     { label: '-40', color: 'green', threshold: -40 },
-
 ]
 
+export const LEVEL_INDICATOR_LEDS_BASIC: IndicatorLedGain[] = [
+    { label: 'Pk', color: 'red', threshold: 12 },
+    { label: '0', color: 'green', threshold: 0 },
+    { label: 'Sig', color: 'green', threshold: -30 },
+]
+
+
 interface LevelIndicatorProps {
-    level: number
+    level: number,
+    indicatorLedGains?: IndicatorLedGain[]
 }
 
-const LevelIndicator: React.FC<LevelIndicatorProps> = ({ level }) => {
+const LevelIndicator: React.FC<LevelIndicatorProps> = ({ level, indicatorLedGains = LEVEL_INDICATOR_LEDS_FULL }) => {
     return (
         <div>
-            {LEVEL_INDICATOR_LEDS.map((led, index) => (
+            {indicatorLedGains.map((led, index) => (
                 <div key={index} style={{ display: "flex", gap: PADDING.small }}>
                     <LED color={led.color} on={level > led.threshold} />
-                    {led.label}
+                    <span style={{fontSize: FONTSIZE.small }}>{led.label}</span>
                 </div>
             ))}
         </div>

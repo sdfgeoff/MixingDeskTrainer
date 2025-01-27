@@ -6,7 +6,7 @@ export const COLORS = {
     interact_color:'#aa0044',
 }
 
-export const BORDER_RADIUS = '1rem'
+export const BORDER_RADIUS = '0.5rem'
 
 export const PADDING = {
     small: '0.5em',

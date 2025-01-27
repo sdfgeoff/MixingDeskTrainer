@@ -11,7 +11,7 @@ export interface AudioPanelProps {
     audioTracks: AudioTrack[],
     setAudioSource: (source: MediaElementAudioSourceNode | undefined) => void;
     setAudioContext: (context: AudioContext | undefined) => void;
-    setMixerModel: (model: MixerModel | undefined) => void;
+    setMixerModel: (model: MixerModel) => void;
 }
 
 
@@ -35,12 +35,13 @@ const DEFAULT_CHANNEL_FILTERS: Filters = {
         gainDb: 0
     }
 }
-const DEFAULT_MIXER_MODEL: MixerModel = {
+export const DEFAULT_MIXER_MODEL: MixerModel = {
     source: {
         audioUrl: ''
     },
     channels: Array.from({ length: DEFAULT_CHANNELS }, (_, i) => ({
         name: `Channel ${i + 1}`,
+        pan: 0,
         source: {
             channel: i
         },
@@ -57,7 +58,7 @@ const DEFAULT_MIXER_MODEL: MixerModel = {
     busses: [
         {
             name: 'Main',
-            bands: Array.from({ length: 2 }, (_, i) => ({
+            bands: Array.from({ length: DEFAULT_CHANNELS }, (_, i) => ({
                 channelSource: i,
                 fader: {
                     gainDb: 0
@@ -73,16 +74,20 @@ const AudioPanelMulti: React.FC<AudioPanelProps> = ({ audioTracks, setAudioSourc
 
     const dataUrl = audioTrack?.source == 'default' ? audioTrack?.src : undefined
     const modelResponse = useJsonUrl<MixerModel>(dataUrl);
-    const mixerModel: MixerModel | undefined = useMemo(() => {
+    const mixerModel: MixerModel = useMemo(() => {
         if (!audioTrack) {
-            return undefined;
+            return DEFAULT_MIXER_MODEL;
         }
         if (audioTrack.source == 'default') {
-            return modelResponse.data;
+            if (modelResponse.state === 'loaded') {
+                return modelResponse.data;
+            }
+            return DEFAULT_MIXER_MODEL;
         }
         return {
             ...DEFAULT_MIXER_MODEL,
             source: {
+                ...DEFAULT_MIXER_MODEL.source,
                 audioUrl: audioTrack.src
             }
         }

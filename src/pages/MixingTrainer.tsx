@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Panel } from '../components/Panel'
-import { COLORS, PADDING } from '../StyleConstants';
+import { BORDER_RADIUS, COLORS, FONTSIZE, PADDING } from '../StyleConstants';
 import { useAudioDestination } from '../hooks/useAudioDestination';
 import { AudioTrack } from '../components/Panels/TrackPicker';
-import AudioPanelMulti from '../components/Panels/AudioPanelMulti';
-import { MixerModel } from '../components/MixerModel';
+import AudioPanelMulti, { DEFAULT_MIXER_MODEL } from '../components/Panels/AudioPanelMulti';
+import { Bus, MixerModel } from '../components/MixerModel';
+import FaderControl from '../components/FaderControl';
+import { LabelledControl } from '../components/LabelledControl';
+import { LEDButtonRound } from '../components/LedButtonRound';
+import LevelIndicator, { LEVEL_INDICATOR_LEDS_BASIC } from '../components/LevelIndicator';
+import { useAudioLevel } from '../hooks/useAudioLevel';
 
 
 // Define a list of pre-existing audio tracks
@@ -13,25 +18,35 @@ const audioTracks: AudioTrack[] = [
 ];
 
 
+const LevelIndicatorFromNode: React.FC<{audioContext: AudioContext | undefined, listenTo: AudioNode | undefined}> = ({audioContext, listenTo}) => {
+    const level = useAudioLevel(audioContext, listenTo);
+    return <LevelIndicator level={level} indicatorLedGains={LEVEL_INDICATOR_LEDS_BASIC} />
+}
+
+
+
 const MixingTrainer: React.FC = () => {
     const [audioContext, setAudioContext] = useState<AudioContext>();
     const [sourceNode, setSourceNode] = useState<MediaElementAudioSourceNode>();
-    const [mixerModel, setMixerModel] = useState<MixerModel>();
+    const [mixerModel, setMixerModel] = useState<MixerModel>(DEFAULT_MIXER_MODEL);
 
+    const numChannels = useMemo(() => {
+        return mixerModel.channels.map((channel) => channel.source.channel).reduce((a, b) => Math.max(a, b), 0) + 1;
+    }, [mixerModel]);
 
     const channelSplitter = useMemo(() => {
         if (audioContext) {
-            const splitter = audioContext.createChannelSplitter(32);
+            const splitter = audioContext.createChannelSplitter(numChannels);
             return splitter;
         }
-    }, [audioContext]);
+    }, [audioContext, numChannels]);
 
-    const channelMerger = useMemo(() => {
-        if (audioContext) {
-            const merger = audioContext.createChannelMerger(2);
-            return merger;
-        }
-    }, [audioContext]);
+
+    const busId = 0;
+    const bus = React.useMemo(() => {
+        return mixerModel?.busses[busId];
+    }, [mixerModel]);
+
 
     // Connect source to channel splitter
     useEffect(() => {
@@ -40,25 +55,202 @@ const MixingTrainer: React.FC = () => {
         }
     }, [sourceNode, channelSplitter]);
 
+    /////////////////////////////// PREAMPS ///////////////////////////////
+    const preampNodes = useMemo(() => {
+        if (audioContext) {
+            return Array.from({ length: numChannels }, (_, _i) => {
+                const node = audioContext.createGain();
+                node.gain.value = 1;
+                return node;
+            })
+        }
+    }, [audioContext, numChannels]);
 
-
-    // Connect channel splitter to channel merger
+    // Connect channel splitter to preamps
     useEffect(() => {
-        if (channelSplitter && channelMerger) {
+        if (channelSplitter && preampNodes) {
+            preampNodes.forEach((node, i) => {
+                channelSplitter.connect(node, i);
+            })
+        }
+    }, [channelSplitter, preampNodes]);
 
-            // For now, mix all the channels together
-            mixerModel?.busses[0].bands.forEach((band) => {
-                const channelId = band.channelSource;
-                const channelData = mixerModel?.channels[channelId];
-                if (channelData) {
-                    channelSplitter.connect(channelMerger, channelId, 0);
-                    channelSplitter.connect(channelMerger, channelId, 1);
+    // Sync preamp nodes with mixer model
+    useEffect(() => {
+        if (preampNodes) {
+            mixerModel.channels.forEach((channel, i) => {
+                preampNodes[i].gain.value = Math.pow(10, channel.filters.preamp.gainDb / 20);
+            })
+        }
+    }, [mixerModel, preampNodes]);
+
+
+    /////////////////////////////// MUTE NODES ///////////////////////////////
+    // Mute Nodes
+    const muteNodes = useMemo(() => {
+        if (audioContext) {
+            return Array.from({ length: numChannels }, (_, _i) => {
+                const node = audioContext.createGain();
+                node.gain.value = 1;
+                return node;
+            })
+        }
+    }, [audioContext, numChannels]);
+
+    // Connect preamps to mute nodes
+    useEffect(() => {
+        if (preampNodes && muteNodes) {
+            preampNodes.forEach((node, i) => {
+                node.connect(muteNodes[i]);
+            })
+        }
+    }, [preampNodes, muteNodes]);
+
+    // Sync mute nodes with mixer model
+    useEffect(() => {
+        if (muteNodes) {
+            mixerModel.channels.forEach((channel, i) => {
+                if (channel.mute.state) {
+                    muteNodes[i].gain.value = 0;
+                } else {
+                    muteNodes[i].gain.value = 1;
                 }
             })
         }
-    }, [channelSplitter, channelMerger, mixerModel]);
+    }, [mixerModel, muteNodes]);
+
+    /////////////////////////////// PAN NODES ///////////////////////////////
+    // Pan Nodes
+    const panNodes = useMemo(() => {
+        if (audioContext) {
+            return Array.from({ length: numChannels }, (_, _i) => {
+                const left_gain = audioContext.createGain();
+                const right_gain = audioContext.createGain();
+                left_gain.gain.value = 1;
+                right_gain.gain.value = 1;
+                return {
+                    left: left_gain,
+                    right: right_gain,
+                };
+            })
+        }
+    }, [audioContext, numChannels]);
+
+    // Connect mute nodes to pan nodes
+    useEffect(() => {
+        if (muteNodes && panNodes) {
+            muteNodes.forEach((node, i) => {
+                node.connect(panNodes[i].left);
+                node.connect(panNodes[i].right);
+            })
+        }
+    }, [muteNodes, panNodes]);
+
+    // Sync pan nodes with mixer model
+    useEffect(() => {
+        if (panNodes) {
+            mixerModel.channels.forEach((channel, i) => {
+                const pan = channel.pan; // between -1 and 1 with zero being center
+                panNodes[i].left.gain.value = (1 + pan) / 2;
+                panNodes[i].right.gain.value = (1 - pan) / 2;
+            })
+        }
+    }, [mixerModel, panNodes]);
+
+
+    /////////////////////////// FADERS ///////////////////////////
+    // Fader Nodes
+    const faderNodes = useMemo(() => {
+        if (audioContext) {
+            return Array.from({ length: bus.bands.length }, (_, _i) => {
+                const node_left = audioContext.createGain();
+                node_left.gain.value = 1;
+                const node_right = audioContext.createGain();
+                node_right.gain.value = 1;
+
+                return {
+                    left: node_left,
+                    right: node_right
+                };
+            })
+        }
+    }, [audioContext, numChannels]);
+
+    // Connect pan nodes to fader nodes
+    useEffect(() => {
+        if (panNodes && faderNodes) {
+            faderNodes.forEach((node, i) => {
+                const inputChannel = bus.bands[i].channelSource;
+                panNodes[inputChannel].left.connect(node.left);
+                panNodes[inputChannel].right.connect(node.right);
+            })
+        }
+    }, [panNodes, faderNodes, bus]);
+
+    // Sync fader nodes with mixer model
+    useEffect(() => {
+        if (faderNodes) {
+            bus.bands.forEach((band, i) => {
+                faderNodes[i].left.gain.value = Math.pow(10, band.fader.gainDb / 20);
+                faderNodes[i].right.gain.value = Math.pow(10, band.fader.gainDb / 20);
+            })
+        }
+    }, [mixerModel, faderNodes]);
+
+    /////////////////////////// CHANNEL MERGER ///////////////////////////
+    const channelMerger = useMemo(() => {
+        if (audioContext) {
+            const merger = audioContext.createChannelMerger(2);
+            return merger;
+        }
+    }, [audioContext]);
+
+    // Connect fader nodes to channel merger
+    useEffect(() => {
+        if (faderNodes && channelMerger) {
+            faderNodes.forEach((node, i) => {
+                node.left.connect(channelMerger, 0, 0);
+                node.right.connect(channelMerger, 0, 1);
+            })
+        }
+    }, [faderNodes, channelMerger]);
 
     useAudioDestination(audioContext, channelMerger);
+
+
+    const setFaderValue = React.useCallback((busId: number, bandId: number, newValue: number) => {
+        setMixerModel((oldModel) => {
+            if (!oldModel) {
+                return oldModel;
+            }
+            return {
+                ...oldModel,
+                busses: oldModel.busses.map((bus, bId) => {
+                    if (busId === bId) {
+                        return {
+                            ...bus,
+                            bands: bus.bands.map((b, i) => {
+                                if (i === bandId) {
+                                    return {
+                                        ...b,
+                                        fader: {
+                                            ...b.fader,
+                                            gainDb: newValue
+                                        }
+                                    }
+                                } else {
+                                    return b;
+                                }
+                            })
+                        }
+                    } else {
+                        return bus;
+                    }
+                })
+            }
+        })
+    }, [setMixerModel]);
+
 
 
     return (
@@ -68,6 +260,62 @@ const MixingTrainer: React.FC = () => {
             </Panel>
             <Panel heading="Mixer" color={COLORS.background_colorful}>
                 This is a work in progress. The mixer will be displayed here. If you have a multichannel ogg file, the first 32 channels will be rounted to your speakers
+
+            </Panel>
+            <Panel>
+                <div style={{ display: "flex", gap:PADDING.small, justifyContent: "center" }}>
+                    {bus && bus.bands.map((band, index) => {
+                        const channelId = band.channelSource;
+                        return <div key={index} style={{display: "flex", flexDirection: "column", gap: PADDING.small}}>
+                            <LabelledControl label="Mute" position="top">
+
+                                <LEDButtonRound onColor="#ff5555" round={false} on={
+                                    mixerModel?.channels[band.channelSource].mute.state ?? false
+                                }
+                                    onClick={(
+                                        () => {
+                                            setMixerModel((oldModel) => {
+                                                if (!oldModel) {
+                                                    return oldModel;
+                                                }
+                                                return {
+                                                    ...oldModel,
+                                                    channels: oldModel.channels.map((channel, cId) => {
+                                                        if (cId === band.channelSource) {
+                                                            return {
+                                                                ...channel,
+                                                                mute: {
+                                                                    state: !channel.mute.state
+                                                                }
+                                                            }
+                                                        } else {
+                                                            return channel;
+                                                        }
+                                                    })
+                                                }
+                                            })
+                                        }
+                                    )}
+                                />
+                            </LabelledControl>
+
+                            <LevelIndicatorFromNode audioContext={audioContext} listenTo={preampNodes?.[channelId]} />
+
+                            <div style={{ borderRadius: BORDER_RADIUS, background: COLORS.background_colorful, padding: PADDING.small, textAlign: 'center' }}>
+                                        <div style={{width:'5rem', height: '2.5rem', overflow: 'clip', textOverflow: 'elipsis', fontSize: FONTSIZE.small}}>{mixerModel.channels[channelId].name}</div>
+                                    <div style={{fontSize: FONTSIZE.tiny}}>{index + 1}</div>
+                            </div>
+
+                            <LabelledControl label={index + 1}>
+
+                                <FaderControl value={band.fader.gainDb} min={-50} max={10} onChange={(newValue) => {
+                                    setFaderValue(busId, index, newValue)
+                                }} />
+                            </LabelledControl>
+                        </div>
+                    })}
+
+                </div>
             </Panel>
         </div>
     )

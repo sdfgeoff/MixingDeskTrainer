@@ -34,6 +34,7 @@ export interface ChannelSettings {
     filters: Filters
     mute: MuteSettings
     pafl: PaflSettings
+    pan: number
 }
 
 export interface MuteSettings {
