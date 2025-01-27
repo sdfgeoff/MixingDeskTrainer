@@ -3,12 +3,16 @@ import { Panel } from '../components/Panel'
 import { BORDER_RADIUS, COLORS, FONTSIZE, PADDING } from '../StyleConstants';
 import { useAudioDestination } from '../hooks/useAudioDestination';
 import { AudioTrack } from '../components/Panels/TrackPicker';
-import AudioPanelMulti, { DEFAULT_MIXER_MODEL } from '../components/Panels/AudioPanelMulti';
-import { Bus, ChannelSettings, MixerModel, Mod } from '../components/MixerModel';
+import AudioPanelMulti from '../components/Panels/AudioPanelMulti';
+import { DEFAULT_MIXER_MODEL } from "../components/MixerModelDefault";
+import { ChannelSettings, MixerModel, Mod } from '../components/MixerModel';
 import FaderControl from '../components/FaderControl';
 import { LabelledControl } from '../components/LabelledControl';
 import { LEDButtonRound } from '../components/LedButtonRound';
-import LevelIndicator, { IndicatorLedGain, LEVEL_INDICATOR_LEDS_BASIC, LEVEL_INDICATOR_LEDS_FULL } from '../components/LevelIndicator';
+import LevelIndicator from '../components/LevelIndicator';
+import { IndicatorLedGain } from "../components/LevelIndicatorPresets";
+import { LEVEL_INDICATOR_LEDS_BASIC } from "../components/LevelIndicatorPresets";
+import { LEVEL_INDICATOR_LEDS_FULL } from "../components/LevelIndicatorPresets";
 import { useAudioLevel } from '../hooks/useAudioLevel';
 import PreampPanel from '../components/Panels/PreampPanel';
 import PanPanel from '../components/Panels/PanPanel';
@@ -62,7 +66,7 @@ const MixingTrainer: React.FC = () => {
     /////////////////////////////// PREAMPS ///////////////////////////////
     const preampNodes = useMemo(() => {
         if (audioContext) {
-            return Array.from({ length: numChannels }, (_, _i) => {
+            return Array.from({ length: numChannels }, () => {
                 const node = audioContext.createGain();
                 node.gain.value = 1;
                 return node;
@@ -96,7 +100,7 @@ const MixingTrainer: React.FC = () => {
     // Pan Nodes
     const panNodes = useMemo(() => {
         if (audioContext) {
-            return Array.from({ length: numChannels }, (_, _i) => {
+            return Array.from({ length: numChannels }, () => {
                 const left_gain = audioContext.createGain();
                 const right_gain = audioContext.createGain();
                 left_gain.gain.value = 1;
@@ -135,7 +139,7 @@ const MixingTrainer: React.FC = () => {
     // Fader Nodes
     const faderNodes = useMemo(() => {
         if (audioContext) {
-            return Array.from({ length: bus.bands.length }, (_, _i) => {
+            return Array.from({ length: bus.bands.length }, () => {
                 const node_left = audioContext.createGain();
                 node_left.gain.value = 1;
                 const node_right = audioContext.createGain();
@@ -147,7 +151,7 @@ const MixingTrainer: React.FC = () => {
                 };
             })
         }
-    }, [audioContext, numChannels]);
+    }, [audioContext, bus.bands.length]);
 
     // Connect pan nodes to fader nodes
     useEffect(() => {
@@ -168,7 +172,7 @@ const MixingTrainer: React.FC = () => {
                 faderNodes[i].right.gain.value = Math.pow(10, band.fader.gainDb / 20);
             })
         }
-    }, [mixerModel, faderNodes]);
+    }, [faderNodes, bus.bands]);
 
     /////////////////////////// CHANNEL MERGER ///////////////////////////
     const channelMerger = useMemo(() => {
@@ -181,7 +185,7 @@ const MixingTrainer: React.FC = () => {
     // Connect fader nodes to channel merger
     useEffect(() => {
         if (faderNodes && channelMerger) {
-            faderNodes.forEach((node, i) => {
+            faderNodes.forEach((node) => {
                 node.left.connect(channelMerger, 0, 0);
                 node.right.connect(channelMerger, 0, 1);
             })
@@ -285,29 +289,29 @@ const MixingTrainer: React.FC = () => {
 
             </Panel>
             <div style={{ display: "flex", gap: PADDING.small }}>
-            <Panel heading="Preamp">
-                <PreampPanel preamp={mixerModel.channels[selectedChannel].filters.preamp} onChangePreamp={(updater) => {
-                    updateSelectedChannel((oldChannel) => {
-                        return {
-                            ...oldChannel,
-                            filters: {
-                                ...oldChannel.filters,
-                                preamp: updater(oldChannel.filters.preamp)
+                <Panel heading="Preamp">
+                    <PreampPanel preamp={mixerModel.channels[selectedChannel].filters.preamp} onChangePreamp={(updater) => {
+                        updateSelectedChannel((oldChannel) => {
+                            return {
+                                ...oldChannel,
+                                filters: {
+                                    ...oldChannel.filters,
+                                    preamp: updater(oldChannel.filters.preamp)
+                                }
                             }
-                        }
-                    })
-                }} preampLevel={monitoredPreamp} />
-            </Panel>
-            <Panel heading="Pan">
-                <PanPanel pan={mixerModel.channels[selectedChannel].pan} onChangePan={(updater) => {
-                    updateSelectedChannel((oldChannel) => {
-                        return {
-                            ...oldChannel,
-                            pan: updater(oldChannel.pan)
-                        }
-                    })
-                }}/>
-            </Panel>
+                        })
+                    }} preampLevel={monitoredPreamp} />
+                </Panel>
+                <Panel heading="Pan">
+                    <PanPanel pan={mixerModel.channels[selectedChannel].pan} onChangePan={(updater) => {
+                        updateSelectedChannel((oldChannel) => {
+                            return {
+                                ...oldChannel,
+                                pan: updater(oldChannel.pan)
+                            }
+                        })
+                    }} />
+                </Panel>
             </div>
             <div style={{ display: "flex", gap: PADDING.small }}>
                 <Panel heading="Faders">

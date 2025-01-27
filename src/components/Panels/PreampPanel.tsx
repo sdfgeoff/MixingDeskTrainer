@@ -3,7 +3,7 @@ import KnobControl from "../KnobControl";
 import { PADDING, FONTSIZE } from "../../StyleConstants";
 import { LED } from "../ColoredLed";
 import { Mod, Preamp } from "../MixerModel";
-import { PK_THRESHOLD } from "../LevelIndicator";
+import { PK_THRESHOLD } from "../LevelIndicatorPresets";
 
 
 interface PreampProps {
