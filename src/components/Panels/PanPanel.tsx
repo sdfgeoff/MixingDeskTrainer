@@ -14,7 +14,7 @@ const PanLEDS = [
     { label: 'L', min: -8 / 7, max: -6 / 7, color: 'yellow' },
     { label: '', min: -6 / 7, max: -4 / 7, color: 'yellow' },
     { label: '', min: -4 / 7, max: -2 / 7, color: 'yellow' },
-    { label: 'C', min: -2 / 7, max: 2 / 7, color: 'lightgreen' },
+    { label: 'C', min: -2 / 7, max: 2 / 7, color: 'green' },
     { label: '', min: 2 / 7, max: 4 / 7, color: 'yellow' },
     { label: '', min: 4 / 7, max: 6 / 7, color: 'yellow' },
     { label: 'R', min: 6 / 7, max: 8 / 7, color: 'yellow' },

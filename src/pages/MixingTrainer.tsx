@@ -190,8 +190,8 @@ const MixingTrainer: React.FC = () => {
         if (panNodes) {
             mixerModel.channels.forEach((channel, i) => {
                 const pan = channel.pan; // between -1 and 1 with zero being center
-                panNodes[i].left.gain.value = (1 + pan.pan) / 2;
-                panNodes[i].right.gain.value = (1 - pan.pan) / 2;
+                panNodes[i].left.gain.value = (1 - pan.pan) / 2;
+                panNodes[i].right.gain.value = (1 + pan.pan) / 2;
             })
         }
     }, [mixerModel, panNodes]);
@@ -404,7 +404,7 @@ const MixingTrainer: React.FC = () => {
                             const channelId = band.channelSource;
                             return <div key={index} style={{ display: "flex", flexDirection: "column", gap: PADDING.small }}>
                                 <LabelledControl label="Mute" position="top">
-                                    <LEDButtonRound onColor="#ff5555" shape="rectangle" on={
+                                    <LEDButtonRound ledColor="#ff5555" shape="rectangle" on={
                                         mixerModel?.channels[band.channelSource].mute.state ?? false
                                     }
                                         onClick={(
@@ -435,11 +435,11 @@ const MixingTrainer: React.FC = () => {
                                 </LabelledControl>
 
                                 <LabelledControl label="Sel" position="top">
-                                    <LEDButtonRound onColor="#55ff55" offColor="#557766" on={selectedChannel === channelId} semiTransparent={false} onClick={() => setSelectedChannel(channelId)} />
+                                    <LEDButtonRound ledColor="#55ff55" buttonColor="#557766" on={selectedChannel === channelId} semiTransparent={false} onClick={() => setSelectedChannel(channelId)} />
                                 </LabelledControl>
 
                                 <LabelledControl label="PAFL" position="top">
-                                    <LEDButtonRound shape="round" onColor="red" on={paflChannel === channelId} semiTransparent={false} onClick={() => setPaflChannel((channel) => {
+                                    <LEDButtonRound shape="round" ledColor="red" on={paflChannel === channelId} semiTransparent={false} onClick={() => setPaflChannel((channel) => {
                                         if (channel === channelId) {
                                             return undefined;
                                         } else {

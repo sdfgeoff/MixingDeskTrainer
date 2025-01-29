@@ -97,7 +97,7 @@ export const PEQPanel: React.FC<PEQProps> = ({ eqSettings, onChangeEq: onChange 
                         <LabelledControl label="In">
                             <LEDButtonRound onClick={() => {
                                 onChange((prev) => ({ ...prev, enabled: !prev.enabled }))
-                            }} onColor='lightgreen' on={enabled} />
+                            }} ledColor='lightgreen' on={enabled} />
                         </LabelledControl>
                     </td>
                 </tr>

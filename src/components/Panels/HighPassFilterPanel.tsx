@@ -35,7 +35,7 @@ export const HighPassFilterPanel: React.FC<HighPassFilterProps> = ({ highPassFil
                 }))
 
                 }
-                onColor="lightgreen"
+                ledColor="lightgreen"
             />
 
         </LabelledControl>
