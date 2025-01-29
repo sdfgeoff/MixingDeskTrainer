@@ -1,4 +1,4 @@
-import { PADDING } from "../../StyleConstants";
+import { LED_COLORS, PADDING } from "../../StyleConstants";
 import KnobControl from "../KnobControl";
 import { LabelledControl } from "../LabelledControl";
 import { LEDButtonRound } from "../LedButtonRound";
@@ -35,7 +35,7 @@ export const HighPassFilterPanel: React.FC<HighPassFilterProps> = ({ highPassFil
                 }))
 
                 }
-                ledColor="lightgreen"
+                ledColor={LED_COLORS.green}
             />
 
         </LabelledControl>

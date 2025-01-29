@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Panel } from '../components/Panel'
-import { BORDER_RADIUS, COLORS, FONTSIZE, PADDING } from '../StyleConstants';
+import { BORDER_RADIUS, COLORS, FONTSIZE, LED_COLORS, PADDING } from '../StyleConstants';
 import { useAudioDestination } from '../hooks/useAudioDestination';
 import { AudioTrack } from '../components/Panels/TrackPicker';
 import AudioPanelMulti from '../components/Panels/AudioPanelMulti';
@@ -404,7 +404,7 @@ const MixingTrainer: React.FC = () => {
                             const channelId = band.channelSource;
                             return <div key={index} style={{ display: "flex", flexDirection: "column", gap: PADDING.small }}>
                                 <LabelledControl label="Mute" position="top">
-                                    <LEDButtonRound ledColor="#ff5555" shape="rectangle" on={
+                                    <LEDButtonRound ledColor={LED_COLORS.red} shape="rectangle" on={
                                         mixerModel?.channels[band.channelSource].mute.state ?? false
                                     }
                                         onClick={(
@@ -439,7 +439,7 @@ const MixingTrainer: React.FC = () => {
                                 </LabelledControl>
 
                                 <LabelledControl label="PAFL" position="top">
-                                    <LEDButtonRound shape="round" ledColor="red" on={paflChannel === channelId} semiTransparent={false} onClick={() => setPaflChannel((channel) => {
+                                    <LEDButtonRound shape="round" ledColor={LED_COLORS.red} buttonColor='#555' on={paflChannel === channelId} semiTransparent={false} onClick={() => setPaflChannel((channel) => {
                                         if (channel === channelId) {
                                             return undefined;
                                         } else {
@@ -473,7 +473,7 @@ const MixingTrainer: React.FC = () => {
                         <LevelIndicatorFromNode audioContext={audioContext} listenTo={outputFaderNode} indicatorLedGains={LEVEL_INDICATOR_LEDS_FULL} />
 
                         <LabelledControl label="PAFL">
-                            <LED color="red" on={paflChannel !== undefined} />
+                            <LED color={LED_COLORS.red} on={paflChannel !== undefined} />
                         </LabelledControl>
 
                         <div style={{

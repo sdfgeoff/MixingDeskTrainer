@@ -1,6 +1,6 @@
 import { LabelledControl } from "../LabelledControl";
 import KnobControl from "../KnobControl";
-import { PADDING, FONTSIZE } from "../../StyleConstants";
+import { PADDING, FONTSIZE, LED_COLORS } from "../../StyleConstants";
 import { LED } from "../ColoredLed";
 import { Mod, PanSettings } from "../MixerModel";
 
@@ -11,13 +11,13 @@ interface PanProps {
 }
 
 const PanLEDS = [
-    { label: 'L', min: -8 / 7, max: -6 / 7, color: 'yellow' },
-    { label: '', min: -6 / 7, max: -4 / 7, color: 'yellow' },
-    { label: '', min: -4 / 7, max: -2 / 7, color: 'yellow' },
-    { label: 'C', min: -2 / 7, max: 2 / 7, color: 'green' },
-    { label: '', min: 2 / 7, max: 4 / 7, color: 'yellow' },
-    { label: '', min: 4 / 7, max: 6 / 7, color: 'yellow' },
-    { label: 'R', min: 6 / 7, max: 8 / 7, color: 'yellow' },
+    { label: 'L', min: -8 / 7, max: -6 / 7, color: LED_COLORS.yellow },
+    { label: '', min: -6 / 7, max: -4 / 7, color: LED_COLORS.yellow },
+    { label: '', min: -4 / 7, max: -2 / 7, color: LED_COLORS.yellow },
+    { label: 'C', min: -2 / 7, max: 2 / 7, color: LED_COLORS.green },
+    { label: '', min: 2 / 7, max: 4 / 7, color: LED_COLORS.yellow },
+    { label: '', min: 4 / 7, max: 6 / 7, color: LED_COLORS.yellow },
+    { label: 'R', min: 6 / 7, max: 8 / 7, color: LED_COLORS.yellow },
 ]
 
 

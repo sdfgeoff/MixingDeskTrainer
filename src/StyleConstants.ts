@@ -3,7 +3,7 @@ export const COLORS = {
     text: '#FFFFFF',
     primary: '#FFFFFF',
     background_colorful: '#0044aa',
-    interact_color:'#aa0044',
+    interact_color: '#aa0044',
 }
 
 export const BORDER_RADIUS = '0.5rem'
@@ -19,4 +19,12 @@ export const FONTSIZE = {
     small: '0.8rem',
     medium: '1rem',
     large: '2rem'
+}
+
+
+
+export const LED_COLORS = {
+    red: '#FF5555',
+    green: '#00FF00',
+    yellow: '#999900',
 }
