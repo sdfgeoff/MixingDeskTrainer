@@ -5,7 +5,6 @@ import { PEQPanel } from "../components/Panels/PEQPanel";
 import { COLORS, PADDING } from "../StyleConstants";
 import { MinimizablePanel, Panel } from "../components/Panel";
 import { useAudioLevel } from "../hooks/useAudioLevel";
-import LevelIndicator from "../components/LevelIndicator";
 import PreampPanel from "../components/Panels/PreampPanel";
 import { HighPassFilterPanel } from "../components/Panels/HighPassFilterPanel";
 import { useAudioDestination } from "../hooks/useAudioDestination";
@@ -13,6 +12,8 @@ import AudioPanelMono from "../components/Panels/AudioPanelMono";
 import { createEqFilterChain } from "../audioProcessing/EqFilterChain";
 import { createChannelNodes, syncChannelProcessingToMixerModel } from "../audioProcessing/InputChannelProcessing";
 import { AUDIO_SOURCES_MONO } from "../AvailableAudio";
+import LevelIndicatorFromNode from "../components/LevelIndicatorFromNode";
+import { LEVEL_INDICATOR_LEDS_FULL } from "../components/LevelIndicatorPresets";
 
 
 const INITIAL_SETTINGS: Filters = {
@@ -88,10 +89,6 @@ function EQTrainer() {
 
   const outputNode = channelProcessing?.pan.right;
 
-  const outputLevel = useAudioLevel(
-    audioContext,
-    outputNode,
-  );
   const preampLevel = useAudioLevel(audioContext, channelProcessing?.preamp);
 
   useAudioDestination(
@@ -318,7 +315,7 @@ function EQTrainer() {
             />
           </Panel>
           <Panel>
-            <LevelIndicator level={outputLevel} />
+            <LevelIndicatorFromNode audioContext={audioContext} listenTo={outputNode} indicatorLedGains={LEVEL_INDICATOR_LEDS_FULL} />
           </Panel>
         </div>
       </div>

@@ -14,28 +14,17 @@ import { ChannelSettings, MixerModel, Mod } from "../components/MixerModel";
 import FaderControl from "../components/FaderControl";
 import { LabelledControl } from "../components/LabelledControl";
 import { LEDButtonRound } from "../components/LedButtonRound";
-import LevelIndicator from "../components/LevelIndicator";
-import { IndicatorLedGain } from "../components/LevelIndicatorPresets";
 import { LEVEL_INDICATOR_LEDS_BASIC } from "../components/LevelIndicatorPresets";
 import { LEVEL_INDICATOR_LEDS_FULL } from "../components/LevelIndicatorPresets";
 import { useAudioLevel } from "../hooks/useAudioLevel";
 import PreampPanel from "../components/Panels/PreampPanel";
 import PanPanel from "../components/Panels/PanPanel";
 import { LED } from "../components/ColoredLed";
-import { createChannelNodes, syncChannelProcessingToMixerModel } from "../audioProcessing/InputChannelProcessing";
 import { AUDIO_SOURCES_MULTITRACK } from "../AvailableAudio";
+import LevelIndicatorFromNode from "../components/LevelIndicatorFromNode";
+import { createMixingDesk, useSyncMixingDeskToMixerModel } from "../audioProcessing/MixingDesk";
 
 
-
-
-const LevelIndicatorFromNode: React.FC<{
-    audioContext: AudioContext | undefined;
-    listenTo: AudioNode | undefined;
-    indicatorLedGains: IndicatorLedGain[];
-}> = ({ audioContext, listenTo, indicatorLedGains }) => {
-    const level = useAudioLevel(audioContext, listenTo);
-    return <LevelIndicator level={level} indicatorLedGains={indicatorLedGains} />;
-};
 
 const MixingTrainer: React.FC = () => {
     const [audioContext, setAudioContext] = useState<AudioContext>();
@@ -61,9 +50,7 @@ const MixingTrainer: React.FC = () => {
     }, [audioContext, numChannels]);
 
     const busId = 0;
-    const bus = React.useMemo(() => {
-        return mixerModel?.busses[busId];
-    }, [mixerModel]);
+    const bus = mixerModel.busses[busId];
 
     // Connect source to channel splitter
     useEffect(() => {
@@ -78,143 +65,35 @@ const MixingTrainer: React.FC = () => {
         };
     }, [sourceNode, channelSplitter]);
 
-    /////////////////////////// CHANNEL PROCESSING ///////////////////////////
-    const channelProcessingChains = useMemo(() => {
+    const mixingDesk = useMemo(() => {
         if (audioContext) {
-            return Array.from({ length: numChannels }, () => {
-                return createChannelNodes(audioContext, 4);
-            });
+            return createMixingDesk(audioContext, numChannels, 4, mixerModel.busses.length, mixerModel.busses[0].bands.length);
         }
-    }, [audioContext, numChannels]);
+    }, [audioContext, numChannels, mixerModel.busses.length, mixerModel.busses[0].bands.length]);
+
+
 
     // Connect channel splitter to channel processing chains
     useEffect(() => {
-        if (channelSplitter && channelProcessingChains) {
-            channelProcessingChains.forEach((nodes, i) => {
+        if (channelSplitter && mixingDesk?.channels) {
+            mixingDesk?.channels.forEach((nodes, i) => {
                 channelSplitter.connect(nodes.preamp, i);
             });
         }
 
         return () => {
-            if (channelSplitter && channelProcessingChains) {
-                channelProcessingChains.forEach((nodes, i) => {
+            if (channelSplitter && mixingDesk?.channels) {
+                mixingDesk?.channels.forEach((nodes, i) => {
                     channelSplitter.disconnect(nodes.preamp, i);
                 });
             }
         };
-    }, [channelSplitter, channelProcessingChains]);
+    }, [channelSplitter, mixingDesk?.channels]);
 
-    // Sync channel processing chains with mixer model
-    useEffect(() => {
-        if (channelProcessingChains) {
-            mixerModel.channels.forEach((channel, i) => {
-                syncChannelProcessingToMixerModel(channelProcessingChains[i], channel);
-            });
-        }
-    }, [channelProcessingChains, mixerModel.channels]);
+    useSyncMixingDeskToMixerModel(mixingDesk, mixerModel);
 
-    /////////////////////////// FADERS ///////////////////////////
-    // Fader Nodes
-    const faderNodes = useMemo(() => {
-        if (audioContext) {
-            return Array.from({ length: bus.bands.length }, () => {
-                const node_left = audioContext.createGain();
-                node_left.gain.value = 1;
-                const node_right = audioContext.createGain();
-                node_right.gain.value = 1;
+    useAudioDestination(audioContext, mixingDesk?.busses[busId].outputGain);
 
-                return {
-                    left: node_left,
-                    right: node_right,
-                };
-            });
-        }
-    }, [audioContext, bus.bands.length]);
-
-    // Connect pan nodes to fader nodes
-    useEffect(() => {
-        if (channelProcessingChains && faderNodes) {
-            faderNodes.forEach((node, i) => {
-                const inputChannel = bus.bands[i].channelSource;
-                channelProcessingChains[inputChannel].pan.left.connect(node.left);
-                channelProcessingChains[inputChannel].pan.right.connect(node.right);
-            });
-        }
-        return () => {
-            if (channelProcessingChains && faderNodes) {
-                faderNodes.forEach((node, i) => {
-                    const inputChannel = bus.bands[i].channelSource;
-                    channelProcessingChains[inputChannel].pan.left.disconnect(node.left);
-                    channelProcessingChains[inputChannel].pan.right.disconnect(node.right);
-                });
-            }
-        };
-    }, [channelProcessingChains, faderNodes, bus]);
-
-    // Sync fader nodes with mixer model
-    useEffect(() => {
-        if (faderNodes) {
-            bus.bands.forEach((band, i) => {
-                faderNodes[i].left.gain.value = Math.pow(10, band.fader.gainDb / 20);
-                faderNodes[i].right.gain.value = Math.pow(10, band.fader.gainDb / 20);
-            });
-        }
-    }, [faderNodes, bus.bands]);
-
-    /////////////////////////// CHANNEL MERGER ///////////////////////////
-    const channelMerger = useMemo(() => {
-        if (audioContext) {
-            const merger = audioContext.createChannelMerger(2);
-            return merger;
-        }
-    }, [audioContext]);
-
-    // Connect fader nodes to channel merger
-    useEffect(() => {
-        if (faderNodes && channelMerger) {
-            faderNodes.forEach((node, i) => {
-                if (paflChannel === undefined || paflChannel === i) {
-                    node.left.connect(channelMerger, 0, 0);
-                    node.right.connect(channelMerger, 0, 1);
-                }
-            });
-        }
-        return () => {
-            if (faderNodes && channelMerger) {
-                faderNodes.forEach((node, i) => {
-                    if (paflChannel === undefined || paflChannel === i) {
-                        node.left.disconnect(channelMerger, 0, 0);
-                        node.right.disconnect(channelMerger, 0, 1);
-                    }
-                });
-            }
-        };
-    }, [faderNodes, channelMerger, paflChannel]);
-
-    /////////////////////////// Output Fader ///////////////////////////
-    const outputFaderNode = useMemo(() => {
-        if (audioContext) {
-            const node = audioContext.createGain();
-            node.gain.value = 1;
-            return node;
-        }
-    }, [audioContext]);
-
-    // Connect channel merger to output fader
-    useEffect(() => {
-        if (channelMerger && outputFaderNode) {
-            channelMerger.connect(outputFaderNode);
-        }
-    }, [channelMerger, outputFaderNode]);
-
-    // Sync output fader with mixer model
-    useEffect(() => {
-        if (outputFaderNode) {
-            outputFaderNode.gain.value = Math.pow(10, bus.output_gain.gainDb / 20);
-        }
-    }, [bus, outputFaderNode]);
-
-    useAudioDestination(audioContext, outputFaderNode);
 
     const setFaderValue = React.useCallback(
         (busId: number, bandId: number, newValue: number) => {
@@ -254,7 +133,7 @@ const MixingTrainer: React.FC = () => {
 
     const monitoredPreamp = useAudioLevel(
         audioContext,
-        channelProcessingChains?.[selectedChannel].preamp,
+        mixingDesk?.channels[selectedChannel].preamp,
     );
 
     const updateChannelById = useCallback(
@@ -403,7 +282,7 @@ const MixingTrainer: React.FC = () => {
 
                                         <LevelIndicatorFromNode
                                             audioContext={audioContext}
-                                            listenTo={channelProcessingChains?.[channelId].preamp}
+                                            listenTo={mixingDesk?.channels[channelId].preamp}
                                             indicatorLedGains={LEVEL_INDICATOR_LEDS_BASIC}
                                         />
 
@@ -454,7 +333,7 @@ const MixingTrainer: React.FC = () => {
                     >
                         <LevelIndicatorFromNode
                             audioContext={audioContext}
-                            listenTo={outputFaderNode}
+                            listenTo={mixingDesk?.busses[busId].outputGain}
                             indicatorLedGains={LEVEL_INDICATOR_LEDS_FULL}
                         />
 

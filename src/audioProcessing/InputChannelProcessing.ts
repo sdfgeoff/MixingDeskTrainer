@@ -1,7 +1,8 @@
 import { ChannelSettings } from "../components/MixerModel";
+import { dbToValue } from "./db_util";
 import { createEqFilterChain, syncEqFilterChainToModel } from "./EqFilterChain";
 
-interface ChannelNodes {
+export interface ChannelNodes {
     preamp: GainNode,
     highPassFilter: BiquadFilterNode,
     parametricEq: BiquadFilterNode[],
@@ -56,7 +57,7 @@ export const createChannelNodes = (audioContext: AudioContext, parametricEqSize:
 export const syncChannelProcessingToMixerModel = (channelNodes: ChannelNodes, channel: ChannelSettings): void => {
     const { preamp, highPassFilter, parametricEq, mute, pan } = channelNodes;
 
-    preamp.gain.value = Math.pow(10, channel.filters.preamp.gainDb / 20);
+    preamp.gain.value = dbToValue(channel.filters.preamp.gainDb);
 
     highPassFilter.frequency.value = channel.filters.highPassFilter.frequency;
     highPassFilter.Q.value = channel.filters.highPassFilter.q;
