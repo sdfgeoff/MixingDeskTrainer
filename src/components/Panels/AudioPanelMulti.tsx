@@ -19,13 +19,13 @@ export interface AudioPanelProps {
 const AudioPanelMulti: React.FC<AudioPanelProps> = ({ audioTracks, setAudioSource, setAudioContext, setMixerModel }) => {
     const [audioTrack, setAudioTrack] = useState<AudioTrack | undefined>();
 
-    const dataUrl = audioTrack?.source == 'default' ? audioTrack?.src : undefined
+    const dataUrl = audioTrack?.source === 'default' ? audioTrack?.src : undefined
     const modelResponse = useJsonUrl<MixerModel>(dataUrl);
     const mixerModel: MixerModel = useMemo(() => {
         if (!audioTrack) {
             return DEFAULT_MIXER_MODEL;
         }
-        if (audioTrack.source == 'default') {
+        if (audioTrack.source === 'default') {
             if (modelResponse.state === 'loaded') {
                 return modelResponse.data;
             }

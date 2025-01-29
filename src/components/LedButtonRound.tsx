@@ -15,8 +15,8 @@ export const LEDButtonRound: React.FC<LEDButtonRound> = ({ on, onClick, ledColor
     const borderRadius = shape === 'oval' || shape === 'round' ? '50%' : '0.2rem'
     return (
         <button style={{
-            width: shape == 'round' ? '3rem' : '4rem',
-            height: shape == 'round' ? '3rem' : '2rem',
+            width: shape === 'round' ? '3rem' : '4rem',
+            height: shape === 'round' ? '3rem' : '2rem',
             background: (on && semiTransparent) ? ledColor : buttonColor,
             borderRadius: borderRadius,
             cursor: 'pointer',
