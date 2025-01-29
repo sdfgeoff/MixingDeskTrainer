@@ -16,6 +16,9 @@ import { LabelledControl } from "../components/LabelledControl";
 import { LEDButtonRound } from "../components/LedButtonRound";
 import { LEVEL_INDICATOR_LEDS_BASIC } from "../components/LevelIndicatorPresets";
 import { LEVEL_INDICATOR_LEDS_FULL } from "../components/LevelIndicatorPresets";
+import { useAudioLevel } from "../hooks/useAudioLevel";
+import PreampPanel from "../components/Panels/PreampPanel";
+import PanPanel from "../components/Panels/PanPanel";
 import { LED } from "../components/ColoredLed";
 import { AUDIO_SOURCES_MULTITRACK } from "../AvailableAudio";
 import LevelIndicatorFromNode from "../components/LevelIndicatorFromNode";
@@ -23,12 +26,16 @@ import {
   createMixingDesk,
   useSyncMixingDeskToMixerModel,
 } from "../audioProcessing/MixingDesk";
+import { HighPassFilterPanel } from "../components/Panels/HighPassFilterPanel";
+import { PEQPanel } from "../components/Panels/PEQPanel";
+import EQView from "../components/EQView";
 
-const MixingTrainer: React.FC = () => {
+const FullDesk: React.FC = () => {
   const [audioContext, setAudioContext] = useState<AudioContext>();
   const [sourceNode, setSourceNode] = useState<MediaElementAudioSourceNode>();
   const [mixerModel, setMixerModel] = useState<MixerModel>(DEFAULT_MIXER_MODEL);
 
+  const [selectedChannel, setSelectedChannel] = useState<number>(0);
   const [paflChannel, setPaflChannel] = useState<number>();
 
   const numChannels = useMemo(() => {
@@ -140,6 +147,11 @@ const MixingTrainer: React.FC = () => {
     [setMixerModel],
   );
 
+  const monitoredPreamp = useAudioLevel(
+    audioContext,
+    mixingDesk?.channels[selectedChannel].preamp,
+  );
+
   const updateChannelById = useCallback(
     (
       updater: Mod<ChannelSettings>,
@@ -186,6 +198,102 @@ const MixingTrainer: React.FC = () => {
         padding: PADDING.medium,
       }}
     >
+      <div style={{ display: "flex", gap: PADDING.small, alignItems: "end" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: PADDING.small,
+            flexDirection: "column",
+          }}
+        >
+          <Panel heading="Preamp">
+            <PreampPanel
+              preamp={mixerModel.channels[selectedChannel].filters.preamp}
+              onChangePreamp={(updater) => {
+                updateChannelById((oldChannel) => {
+                  return {
+                    ...oldChannel,
+                    filters: {
+                      ...oldChannel.filters,
+                      preamp: updater(oldChannel.filters.preamp),
+                    },
+                  };
+                }, selectedChannel);
+              }}
+              preampLevel={monitoredPreamp}
+            />
+          </Panel>
+
+          <Panel heading="HPF">
+            <HighPassFilterPanel
+              highPassFilter={
+                mixerModel.channels[selectedChannel].filters.highPassFilter
+              }
+              onChangeHighPassFilter={(updater) => {
+                updateChannelById((oldChannel) => {
+                  return {
+                    ...oldChannel,
+                    filters: {
+                      ...oldChannel.filters,
+                      highPassFilter: updater(
+                        oldChannel.filters.highPassFilter,
+                      ),
+                    },
+                  };
+                }, selectedChannel);
+              }}
+            />
+          </Panel>
+        </div>
+
+        <Panel heading="Parametric EQ">
+          <PEQPanel
+            eqSettings={
+              mixerModel.channels[selectedChannel].filters.parametricEq
+            }
+            onChangeEq={(updater) => {
+              updateChannelById((oldChannel) => {
+                return {
+                  ...oldChannel,
+                  filters: {
+                    ...oldChannel.filters,
+                    parametricEq: updater(oldChannel.filters.parametricEq),
+                  },
+                };
+              }, selectedChannel);
+            }}
+          />
+        </Panel>
+
+        <Panel heading="Pan">
+          <PanPanel
+            pan={mixerModel.channels[selectedChannel].pan}
+            onChangePan={(updater) => {
+              updateChannelById(
+                (oldChannel) => {
+                  return {
+                    ...oldChannel,
+                    pan: updater(oldChannel.pan),
+                  };
+                },
+                selectedChannel,
+                false,
+              );
+            }}
+          />
+        </Panel>
+
+        <Panel heading="Screen">
+          <EQView
+            eqSettings={
+              mixerModel.channels[selectedChannel].filters.parametricEq
+            }
+            highPassFilter={
+              mixerModel.channels[selectedChannel].filters.highPassFilter
+            }
+          />
+        </Panel>
+      </div>
       <div style={{ display: "flex", gap: PADDING.small }}>
         <Panel heading="Faders">
           <div
@@ -225,6 +333,16 @@ const MixingTrainer: React.FC = () => {
                             };
                           }, channelId);
                         }}
+                      />
+                    </LabelledControl>
+
+                    <LabelledControl label="Sel" position="top">
+                      <LEDButtonRound
+                        ledColor={LED_COLORS.green}
+                        buttonColor="#557766"
+                        on={selectedChannel === channelId}
+                        semiTransparent={false}
+                        onClick={() => setSelectedChannel(channelId)}
                       />
                     </LabelledControl>
 
@@ -367,4 +485,4 @@ const MixingTrainer: React.FC = () => {
   );
 };
 
-export default MixingTrainer;
+export default FullDesk;

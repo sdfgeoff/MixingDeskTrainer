@@ -5,54 +5,18 @@ import { PEQPanel } from "../components/Panels/PEQPanel";
 import { COLORS, PADDING } from "../StyleConstants";
 import { MinimizablePanel, Panel } from "../components/Panel";
 import { useAudioLevel } from "../hooks/useAudioLevel";
-import LevelIndicator from "../components/LevelIndicator";
 import PreampPanel from "../components/Panels/PreampPanel";
 import { HighPassFilterPanel } from "../components/Panels/HighPassFilterPanel";
 import { useAudioDestination } from "../hooks/useAudioDestination";
 import AudioPanelMono from "../components/Panels/AudioPanelMono";
-import { AudioTrack } from "../components/Panels/TrackPicker";
-
-const createEqFilterChain = (audioContext: AudioContext, length: number) => {
-  const filters = Array.from({ length: length }, () => {
-    const filter = audioContext.createBiquadFilter();
-    filter.type = "peaking";
-    filter.frequency.value = 100;
-    filter.Q.value = 1;
-    filter.gain.value = 0;
-    return filter;
-  });
-
-  // Chain Filters
-  filters.forEach((filter, idx) => {
-    if (idx === 0) {
-      return;
-    } else {
-      filters[idx - 1].connect(filter);
-    }
-  });
-  return filters;
-};
-
-// Define a list of pre-existing audio tracks
-const audioTracks: AudioTrack[] = [
-  {
-    name: "CS Lewis on Prayer",
-    src: "mono/c.s.lewis-original-recording.mp3",
-    description:
-      "A recording of CS Lewis himself talking about prayer. This was recorded in 1944 and became the book 'Mere Christianity'. This track has some strange recording artifacts due to it's age.",
-  },
-  {
-    name: "Piano Improvisation",
-    src: "mono/all-creatures-of-our-god-and-king-piano-improvisation-247210.mp3",
-    description:
-      "An improvisation on All Creatures of our God and King done by smccleery (sourced from pixabay.com)",
-  },
-  {
-    name: "Keith Bible Reading",
-    src: "mono/KeithBibleReading.mp3",
-    description: "Bible Reading at a Lecturn Microphone",
-  },
-];
+import { createEqFilterChain } from "../audioProcessing/EqFilterChain";
+import {
+  createChannelNodes,
+  syncChannelProcessingToMixerModel,
+} from "../audioProcessing/InputChannelProcessing";
+import { AUDIO_SOURCES_MONO } from "../AvailableAudio";
+import LevelIndicatorFromNode from "../components/LevelIndicatorFromNode";
+import { LEVEL_INDICATOR_LEDS_FULL } from "../components/LevelIndicatorPresets";
 
 const INITIAL_SETTINGS: Filters = {
   parametricEq: {
@@ -74,29 +38,13 @@ const INITIAL_SETTINGS: Filters = {
   },
 };
 
-function EQTrainer() {
+const EQTrainer: React.FC = () => {
   const [mixerSettings, setMixerSettings] = useState<Filters>(INITIAL_SETTINGS);
 
   const [audioContext, setAudioContext] = useState<AudioContext>();
   const [sourceNode, setSourceNode] = useState<MediaElementAudioSourceNode>();
 
   const numBands = mixerSettings.parametricEq.bands.length;
-
-  const userEqFilters = useMemo(() => {
-    if (!audioContext) {
-      return undefined;
-    }
-    return createEqFilterChain(audioContext, numBands);
-  }, [audioContext, numBands]);
-
-  const highPassFilter = useMemo(() => {
-    if (!audioContext) {
-      return undefined;
-    }
-    const filter = audioContext.createBiquadFilter();
-    filter.type = "highpass";
-    return filter;
-  }, [audioContext]);
 
   const hiddenEqFilters = useMemo(() => {
     if (!audioContext) {
@@ -105,92 +53,47 @@ function EQTrainer() {
     return createEqFilterChain(audioContext, numBands);
   }, [audioContext, numBands]);
 
-  const preampNode = useMemo(() => {
-    if (!audioContext) {
+  const channelProcessing = useMemo(() => {
+    if (!audioContext || !hiddenEqFilters) {
       return undefined;
     }
-    return audioContext.createGain();
-  }, [audioContext]);
+    return createChannelNodes(audioContext, numBands);
+  }, [audioContext, hiddenEqFilters, numBands]);
 
   // Connect source -> hidden filters -> gain Node -> highpass -> user peq filters -----> destination
   useEffect(() => {
-    if (
-      sourceNode &&
-      userEqFilters &&
-      hiddenEqFilters &&
-      audioContext &&
-      preampNode &&
-      highPassFilter
-    ) {
+    if (sourceNode && hiddenEqFilters && audioContext && channelProcessing) {
       const firstHiddenFilter = hiddenEqFilters[0];
       sourceNode.connect(firstHiddenFilter);
 
       const lastHiddenFilter = hiddenEqFilters[hiddenEqFilters.length - 1];
-      lastHiddenFilter.connect(preampNode);
-
-      preampNode.connect(highPassFilter);
-
-      const firstUserFilter = userEqFilters[0];
-      highPassFilter.connect(firstUserFilter);
+      lastHiddenFilter.connect(channelProcessing.preamp);
 
       return () => {
         sourceNode.disconnect(firstHiddenFilter);
-        preampNode.disconnect(highPassFilter);
-        highPassFilter.disconnect(firstUserFilter);
-        lastHiddenFilter.disconnect(preampNode);
+        lastHiddenFilter.disconnect(channelProcessing.preamp);
       };
     }
-  }, [
-    sourceNode,
-    userEqFilters,
-    hiddenEqFilters,
-    audioContext,
-    highPassFilter,
-    preampNode,
-  ]);
+  }, [sourceNode, hiddenEqFilters, audioContext, channelProcessing]);
 
-  const outputLevel = useAudioLevel(
-    audioContext,
-    userEqFilters ? userEqFilters[userEqFilters.length - 1] : undefined,
-  );
-  const preampLevel = useAudioLevel(audioContext, preampNode);
+  const outputNode = channelProcessing?.pan.right;
 
-  useAudioDestination(
-    audioContext,
-    userEqFilters ? userEqFilters[userEqFilters.length - 1] : undefined,
-  );
-  //useAudioDestination(audioContext, preampNode);
+  const preampLevel = useAudioLevel(audioContext, channelProcessing?.preamp);
+
+  useAudioDestination(audioContext, outputNode);
 
   // Sync change from eqSettings to the biquad filters
   useEffect(() => {
-    if (userEqFilters) {
-      mixerSettings.parametricEq.bands.forEach((band, index) => {
-        const filter = userEqFilters[index];
-        filter.frequency.value = band.frequency;
-        filter.Q.value = band.q;
-        filter.gain.value = mixerSettings.parametricEq.enabled
-          ? band.gainDb
-          : 0;
+    if (channelProcessing) {
+      syncChannelProcessingToMixerModel(channelProcessing, {
+        filters: mixerSettings,
+        name: "",
+        mute: { state: false },
+        pan: { pan: 0 },
+        source: { channel: 0 },
       });
     }
-  }, [userEqFilters, mixerSettings.parametricEq]);
-
-  // Sync changes to the high pass filter
-  useEffect(() => {
-    if (highPassFilter) {
-      highPassFilter.frequency.value = mixerSettings.highPassFilter.enabled
-        ? mixerSettings.highPassFilter.frequency
-        : 0;
-      highPassFilter.Q.value = mixerSettings.highPassFilter.q;
-    }
-  }, [highPassFilter, mixerSettings.highPassFilter]);
-
-  // Sync changes from preamp to the gainNode
-  useEffect(() => {
-    if (preampNode) {
-      preampNode.gain.value = Math.pow(10, mixerSettings.preamp.gainDb / 20);
-    }
-  });
+  }, [mixerSettings, channelProcessing]);
 
   const scrambleHiddenEq = () => {
     if (hiddenEqFilters) {
@@ -241,7 +144,7 @@ function EQTrainer() {
       <MinimizablePanel
         heading="Understanding the controls"
         color={COLORS.interact_color}
-        startExpanded={true}
+        startExpanded={false}
       >
         <p>
           This page provides the controls for a single audio channel, which
@@ -381,7 +284,7 @@ function EQTrainer() {
               />
             </Panel>
           </div>
-          <Panel heading="Parametric EQ">
+          <Panel heading="Screen">
             <PEQPanel
               eqSettings={mixerSettings.parametricEq}
               onChangeEq={setEqValues}
@@ -398,20 +301,24 @@ function EQTrainer() {
             />
           </Panel>
           <Panel>
-            <LevelIndicator level={outputLevel} />
+            <LevelIndicatorFromNode
+              audioContext={audioContext}
+              listenTo={outputNode}
+              indicatorLedGains={LEVEL_INDICATOR_LEDS_FULL}
+            />
           </Panel>
         </div>
       </div>
 
       <Panel heading="Audio Source" color={COLORS.interact_color}>
         <AudioPanelMono
-          audioTracks={audioTracks}
+          audioTracks={AUDIO_SOURCES_MONO}
           setAudioContext={setAudioContext}
           setAudioSource={setSourceNode}
         />
       </Panel>
     </div>
   );
-}
+};
 
 export default EQTrainer;

@@ -2,7 +2,7 @@ import React from "react";
 import { EQBand, Mod, ParametricEq } from "../MixerModel";
 import KnobControl from "../KnobControl";
 import { LabelledControl } from "../LabelledControl";
-import { PADDING } from "../../StyleConstants";
+import { LED_COLORS, PADDING } from "../../StyleConstants";
 import { LEDButtonRound } from "../LedButtonRound";
 
 export interface PEQProps {
@@ -113,7 +113,7 @@ export const PEQPanel: React.FC<PEQProps> = ({
                 onClick={() => {
                   onChange((prev) => ({ ...prev, enabled: !prev.enabled }));
                 }}
-                ledColor="lightgreen"
+                ledColor={LED_COLORS.green}
                 on={enabled}
               />
             </LabelledControl>
