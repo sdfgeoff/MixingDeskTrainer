@@ -12,6 +12,7 @@ import { useAudioDestination } from "../hooks/useAudioDestination";
 import AudioPanelMono from "../components/Panels/AudioPanelMono";
 import { AudioTrack } from "../components/Panels/TrackPicker";
 import { createEqFilterChain } from "../audioProcessing/EqFilterChain";
+import { createChannelNodes, syncChannelProcessingToMixerModel } from "../audioProcessing/InputChannelProcessing";
 
 
 // Define a list of pre-existing audio tracks
@@ -63,21 +64,6 @@ function EQTrainer() {
 
   const numBands = mixerSettings.parametricEq.bands.length;
 
-  const userEqFilters = useMemo(() => {
-    if (!audioContext) {
-      return undefined;
-    }
-    return createEqFilterChain(audioContext, numBands);
-  }, [audioContext, numBands]);
-
-  const highPassFilter = useMemo(() => {
-    if (!audioContext) {
-      return undefined;
-    }
-    const filter = audioContext.createBiquadFilter();
-    filter.type = "highpass";
-    return filter;
-  }, [audioContext]);
 
   const hiddenEqFilters = useMemo(() => {
     if (!audioContext) {
@@ -86,92 +72,66 @@ function EQTrainer() {
     return createEqFilterChain(audioContext, numBands);
   }, [audioContext, numBands]);
 
-  const preampNode = useMemo(() => {
-    if (!audioContext) {
+
+  const channelProcessing = useMemo(() => {
+    if (!audioContext || !hiddenEqFilters) {
       return undefined;
     }
-    return audioContext.createGain();
-  }, [audioContext]);
+    return createChannelNodes(audioContext, numBands);
+  }, [audioContext, hiddenEqFilters, numBands]);
+
 
   // Connect source -> hidden filters -> gain Node -> highpass -> user peq filters -----> destination
   useEffect(() => {
     if (
       sourceNode &&
-      userEqFilters &&
       hiddenEqFilters &&
       audioContext &&
-      preampNode &&
-      highPassFilter
+      channelProcessing
     ) {
       const firstHiddenFilter = hiddenEqFilters[0];
       sourceNode.connect(firstHiddenFilter);
 
       const lastHiddenFilter = hiddenEqFilters[hiddenEqFilters.length - 1];
-      lastHiddenFilter.connect(preampNode);
-
-      preampNode.connect(highPassFilter);
-
-      const firstUserFilter = userEqFilters[0];
-      highPassFilter.connect(firstUserFilter);
+      lastHiddenFilter.connect(channelProcessing.preamp);
 
       return () => {
         sourceNode.disconnect(firstHiddenFilter);
-        preampNode.disconnect(highPassFilter);
-        highPassFilter.disconnect(firstUserFilter);
-        lastHiddenFilter.disconnect(preampNode);
+        lastHiddenFilter.disconnect(channelProcessing.preamp);
       };
     }
   }, [
     sourceNode,
-    userEqFilters,
     hiddenEqFilters,
     audioContext,
-    highPassFilter,
-    preampNode,
+    channelProcessing,
   ]);
+
+  const outputNode = channelProcessing?.pan.right;
 
   const outputLevel = useAudioLevel(
     audioContext,
-    userEqFilters ? userEqFilters[userEqFilters.length - 1] : undefined,
+    outputNode,
   );
-  const preampLevel = useAudioLevel(audioContext, preampNode);
+  const preampLevel = useAudioLevel(audioContext, channelProcessing?.preamp);
 
   useAudioDestination(
     audioContext,
-    userEqFilters ? userEqFilters[userEqFilters.length - 1] : undefined,
+    outputNode,
   );
-  //useAudioDestination(audioContext, preampNode);
 
   // Sync change from eqSettings to the biquad filters
   useEffect(() => {
-    if (userEqFilters) {
-      mixerSettings.parametricEq.bands.forEach((band, index) => {
-        const filter = userEqFilters[index];
-        filter.frequency.value = band.frequency;
-        filter.Q.value = band.q;
-        filter.gain.value = mixerSettings.parametricEq.enabled
-          ? band.gainDb
-          : 0;
-      });
+    if (channelProcessing) {
+      syncChannelProcessingToMixerModel(channelProcessing, {
+        filters: mixerSettings,
+        name: "",
+        mute: { state: false },
+        pan: { pan: 0 },
+        source: { channel: 0 },
+     });
     }
-  }, [userEqFilters, mixerSettings.parametricEq]);
-
-  // Sync changes to the high pass filter
-  useEffect(() => {
-    if (highPassFilter) {
-      highPassFilter.frequency.value = mixerSettings.highPassFilter.enabled
-        ? mixerSettings.highPassFilter.frequency
-        : 0;
-      highPassFilter.Q.value = mixerSettings.highPassFilter.q;
-    }
-  }, [highPassFilter, mixerSettings.highPassFilter]);
-
-  // Sync changes from preamp to the gainNode
-  useEffect(() => {
-    if (preampNode) {
-      preampNode.gain.value = Math.pow(10, mixerSettings.preamp.gainDb / 20);
-    }
-  });
+  }, [mixerSettings, channelProcessing]);
 
   const scrambleHiddenEq = () => {
     if (hiddenEqFilters) {

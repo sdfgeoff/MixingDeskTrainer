@@ -305,7 +305,7 @@ const MixingTrainer: React.FC = () => {
                 };
             });
         },
-        [selectedChannel, setMixerModel],
+        [setMixerModel],
     );
 
     return (
