@@ -26,5 +26,5 @@ export const FONTSIZE = {
 export const LED_COLORS = {
     red: '#FF5555',
     green: '#00FF00',
-    yellow: '#999900',
+    yellow: '#AAAA00',
 }
