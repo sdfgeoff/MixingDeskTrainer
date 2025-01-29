@@ -11,27 +11,8 @@ import { HighPassFilterPanel } from "../components/Panels/HighPassFilterPanel";
 import { useAudioDestination } from "../hooks/useAudioDestination";
 import AudioPanelMono from "../components/Panels/AudioPanelMono";
 import { AudioTrack } from "../components/Panels/TrackPicker";
+import { createEqFilterChain } from "../audioProcessing/EqFilterChain";
 
-const createEqFilterChain = (audioContext: AudioContext, length: number) => {
-  const filters = Array.from({ length: length }, () => {
-    const filter = audioContext.createBiquadFilter();
-    filter.type = "peaking";
-    filter.frequency.value = 100;
-    filter.Q.value = 1;
-    filter.gain.value = 0;
-    return filter;
-  });
-
-  // Chain Filters
-  filters.forEach((filter, idx) => {
-    if (idx === 0) {
-      return;
-    } else {
-      filters[idx - 1].connect(filter);
-    }
-  });
-  return filters;
-};
 
 // Define a list of pre-existing audio tracks
 const audioTracks: AudioTrack[] = [
