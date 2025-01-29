@@ -435,7 +435,7 @@ const MixingTrainer: React.FC = () => {
                                 </LabelledControl>
 
                                 <LabelledControl label="Sel" position="top">
-                                    <LEDButtonRound ledColor="#55ff55" buttonColor="#557766" on={selectedChannel === channelId} semiTransparent={false} onClick={() => setSelectedChannel(channelId)} />
+                                    <LEDButtonRound ledColor={LED_COLORS.green} buttonColor="#557766" on={selectedChannel === channelId} semiTransparent={false} onClick={() => setSelectedChannel(channelId)} />
                                 </LabelledControl>
 
                                 <LabelledControl label="PAFL" position="top">
