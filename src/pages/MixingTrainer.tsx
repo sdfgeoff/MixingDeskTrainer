@@ -92,7 +92,9 @@ const MixingTrainer: React.FC = () => {
 
     useSyncMixingDeskToMixerModel(mixingDesk, mixerModel);
 
-    useAudioDestination(audioContext, mixingDesk?.busses[busId].outputGain);
+    const outputNode = paflChannel === undefined ? mixingDesk?.busses[busId].outputGain : mixingDesk?.channels[paflChannel].preamp;
+
+    useAudioDestination(audioContext, outputNode);
 
 
     const setFaderValue = React.useCallback(
@@ -333,7 +335,7 @@ const MixingTrainer: React.FC = () => {
                     >
                         <LevelIndicatorFromNode
                             audioContext={audioContext}
-                            listenTo={mixingDesk?.busses[busId].outputGain}
+                            listenTo={outputNode}
                             indicatorLedGains={LEVEL_INDICATOR_LEDS_FULL}
                         />
 
