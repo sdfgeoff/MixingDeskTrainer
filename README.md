@@ -14,12 +14,15 @@ You can:
 - Use custom audio or some preset samples
 
 ## Use it?
+
 Click here for the current app:
 
 https://sdfgeoff.github.io/MixingDeskTrainer
 
 ## Development?
+
 This is done with npm/vite/react/typescript If more people start developing on this project I'll set up stylechecking/linting etc.
+
 ```
 npm install
 npm run dev
