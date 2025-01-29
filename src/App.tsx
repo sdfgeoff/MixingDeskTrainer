@@ -3,6 +3,7 @@ import EQTrainer from "./pages/EQTrainer";
 import Intro from "./pages/Intro";
 import { BORDER_RADIUS, COLORS, FONTSIZE, PADDING } from "./StyleConstants";
 import MixingTrainer from "./pages/MixingTrainer";
+import FullDesk from "./pages/FullDesk";
 
 const PAGES = [
   {
@@ -19,6 +20,11 @@ const PAGES = [
     key: "mixingtrainer",
     name: "Mixing Trainer",
     component: MixingTrainer,
+  },
+  {
+    key: "fulldesk",
+    name: "Full Desk",
+    component: FullDesk,
   },
 ];
 

@@ -36,7 +36,7 @@ const INITIAL_SETTINGS: Filters = {
   },
 };
 
-function EQTrainer() {
+const EQTrainer: React.FC = () => {
   const [mixerSettings, setMixerSettings] = useState<Filters>(INITIAL_SETTINGS);
 
   const [audioContext, setAudioContext] = useState<AudioContext>();
@@ -298,7 +298,7 @@ function EQTrainer() {
               />
             </Panel>
           </div>
-          <Panel heading="Parametric EQ">
+          <Panel heading="Screen">
             <PEQPanel
               eqSettings={mixerSettings.parametricEq}
               onChangeEq={setEqValues}
