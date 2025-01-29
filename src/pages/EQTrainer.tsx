@@ -10,11 +10,13 @@ import { HighPassFilterPanel } from "../components/Panels/HighPassFilterPanel";
 import { useAudioDestination } from "../hooks/useAudioDestination";
 import AudioPanelMono from "../components/Panels/AudioPanelMono";
 import { createEqFilterChain } from "../audioProcessing/EqFilterChain";
-import { createChannelNodes, syncChannelProcessingToMixerModel } from "../audioProcessing/InputChannelProcessing";
+import {
+  createChannelNodes,
+  syncChannelProcessingToMixerModel,
+} from "../audioProcessing/InputChannelProcessing";
 import { AUDIO_SOURCES_MONO } from "../AvailableAudio";
 import LevelIndicatorFromNode from "../components/LevelIndicatorFromNode";
 import { LEVEL_INDICATOR_LEDS_FULL } from "../components/LevelIndicatorPresets";
-
 
 const INITIAL_SETTINGS: Filters = {
   parametricEq: {
@@ -44,14 +46,12 @@ const EQTrainer: React.FC = () => {
 
   const numBands = mixerSettings.parametricEq.bands.length;
 
-
   const hiddenEqFilters = useMemo(() => {
     if (!audioContext) {
       return undefined;
     }
     return createEqFilterChain(audioContext, numBands);
   }, [audioContext, numBands]);
-
 
   const channelProcessing = useMemo(() => {
     if (!audioContext || !hiddenEqFilters) {
@@ -60,15 +60,9 @@ const EQTrainer: React.FC = () => {
     return createChannelNodes(audioContext, numBands);
   }, [audioContext, hiddenEqFilters, numBands]);
 
-
   // Connect source -> hidden filters -> gain Node -> highpass -> user peq filters -----> destination
   useEffect(() => {
-    if (
-      sourceNode &&
-      hiddenEqFilters &&
-      audioContext &&
-      channelProcessing
-    ) {
+    if (sourceNode && hiddenEqFilters && audioContext && channelProcessing) {
       const firstHiddenFilter = hiddenEqFilters[0];
       sourceNode.connect(firstHiddenFilter);
 
@@ -80,21 +74,13 @@ const EQTrainer: React.FC = () => {
         lastHiddenFilter.disconnect(channelProcessing.preamp);
       };
     }
-  }, [
-    sourceNode,
-    hiddenEqFilters,
-    audioContext,
-    channelProcessing,
-  ]);
+  }, [sourceNode, hiddenEqFilters, audioContext, channelProcessing]);
 
   const outputNode = channelProcessing?.pan.right;
 
   const preampLevel = useAudioLevel(audioContext, channelProcessing?.preamp);
 
-  useAudioDestination(
-    audioContext,
-    outputNode,
-  );
+  useAudioDestination(audioContext, outputNode);
 
   // Sync change from eqSettings to the biquad filters
   useEffect(() => {
@@ -105,7 +91,7 @@ const EQTrainer: React.FC = () => {
         mute: { state: false },
         pan: { pan: 0 },
         source: { channel: 0 },
-     });
+      });
     }
   }, [mixerSettings, channelProcessing]);
 
@@ -315,7 +301,11 @@ const EQTrainer: React.FC = () => {
             />
           </Panel>
           <Panel>
-            <LevelIndicatorFromNode audioContext={audioContext} listenTo={outputNode} indicatorLedGains={LEVEL_INDICATOR_LEDS_FULL} />
+            <LevelIndicatorFromNode
+              audioContext={audioContext}
+              listenTo={outputNode}
+              indicatorLedGains={LEVEL_INDICATOR_LEDS_FULL}
+            />
           </Panel>
         </div>
       </div>
@@ -329,6 +319,6 @@ const EQTrainer: React.FC = () => {
       </Panel>
     </div>
   );
-}
+};
 
 export default EQTrainer;
