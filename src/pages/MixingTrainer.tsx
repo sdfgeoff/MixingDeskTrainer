@@ -8,7 +8,6 @@ import {
     PADDING,
 } from "../StyleConstants";
 import { useAudioDestination } from "../hooks/useAudioDestination";
-import { AudioTrack } from "../components/Panels/TrackPicker";
 import AudioPanelMulti from "../components/Panels/AudioPanelMulti";
 import { DEFAULT_MIXER_MODEL } from "../components/MixerModelDefault";
 import { ChannelSettings, MixerModel, Mod } from "../components/MixerModel";
@@ -24,31 +23,10 @@ import PreampPanel from "../components/Panels/PreampPanel";
 import PanPanel from "../components/Panels/PanPanel";
 import { LED } from "../components/ColoredLed";
 import { createChannelNodes, syncChannelProcessingToMixerModel } from "../audioProcessing/InputChannelProcessing";
+import { AUDIO_SOURCES_MULTITRACK } from "../AvailableAudio";
 
 
 
-
-
-interface BusNodes {
-    fader: GainNode,
-}
-
-
-
-
-
-
-
-
-
-// Define a list of pre-existing audio tracks
-const audioTracks: AudioTrack[] = [
-    {
-        name: "Mighty Name",
-        src: "multitrack/MightyName/data.json",
-        description: "Mighty Name sung at our local church",
-    },
-];
 
 const LevelIndicatorFromNode: React.FC<{
     audioContext: AudioContext | undefined;
@@ -319,19 +297,7 @@ const MixingTrainer: React.FC = () => {
                 padding: PADDING.medium,
             }}
         >
-            <Panel heading="Audio Source" color={COLORS.interact_color}>
-                <AudioPanelMulti
-                    audioTracks={audioTracks}
-                    setAudioContext={setAudioContext}
-                    setAudioSource={setSourceNode}
-                    setMixerModel={setMixerModel}
-                />
-            </Panel>
-            <Panel heading="Mixer" color={COLORS.background_colorful}>
-                This is a work in progress. The mixer will be displayed here. If you
-                have a multichannel ogg file, the first 32 channels will be rounted to
-                your speakers
-            </Panel>
+
             <div style={{ display: "flex", gap: PADDING.small }}>
                 <Panel heading="Preamp">
                     <PreampPanel
@@ -543,6 +509,14 @@ const MixingTrainer: React.FC = () => {
                     </div>
                 </Panel>
             </div>
+            <Panel heading="Audio Source" color={COLORS.interact_color}>
+                <AudioPanelMulti
+                    audioTracks={AUDIO_SOURCES_MULTITRACK}
+                    setAudioContext={setAudioContext}
+                    setAudioSource={setSourceNode}
+                    setMixerModel={setMixerModel}
+                />
+            </Panel>
         </div>
     );
 };

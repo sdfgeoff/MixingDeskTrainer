@@ -10,31 +10,10 @@ import PreampPanel from "../components/Panels/PreampPanel";
 import { HighPassFilterPanel } from "../components/Panels/HighPassFilterPanel";
 import { useAudioDestination } from "../hooks/useAudioDestination";
 import AudioPanelMono from "../components/Panels/AudioPanelMono";
-import { AudioTrack } from "../components/Panels/TrackPicker";
 import { createEqFilterChain } from "../audioProcessing/EqFilterChain";
 import { createChannelNodes, syncChannelProcessingToMixerModel } from "../audioProcessing/InputChannelProcessing";
+import { AUDIO_SOURCES_MONO } from "../AvailableAudio";
 
-
-// Define a list of pre-existing audio tracks
-const audioTracks: AudioTrack[] = [
-  {
-    name: "CS Lewis on Prayer",
-    src: "mono/c.s.lewis-original-recording.mp3",
-    description:
-      "A recording of CS Lewis himself talking about prayer. This was recorded in 1944 and became the book 'Mere Christianity'. This track has some strange recording artifacts due to it's age.",
-  },
-  {
-    name: "Piano Improvisation",
-    src: "mono/all-creatures-of-our-god-and-king-piano-improvisation-247210.mp3",
-    description:
-      "An improvisation on All Creatures of our God and King done by smccleery (sourced from pixabay.com)",
-  },
-  {
-    name: "Keith Bible Reading",
-    src: "mono/KeithBibleReading.mp3",
-    description: "Bible Reading at a Lecturn Microphone",
-  },
-];
 
 const INITIAL_SETTINGS: Filters = {
   parametricEq: {
@@ -182,7 +161,7 @@ function EQTrainer() {
       <MinimizablePanel
         heading="Understanding the controls"
         color={COLORS.interact_color}
-        startExpanded={true}
+        startExpanded={false}
       >
         <p>
           This page provides the controls for a single audio channel, which
@@ -346,7 +325,7 @@ function EQTrainer() {
 
       <Panel heading="Audio Source" color={COLORS.interact_color}>
         <AudioPanelMono
-          audioTracks={audioTracks}
+          audioTracks={AUDIO_SOURCES_MONO}
           setAudioContext={setAudioContext}
           setAudioSource={setSourceNode}
         />
